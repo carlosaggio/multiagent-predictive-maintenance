@@ -17,6 +17,7 @@ export default function Navbar() {
     { href: "/workorder-generation", label: "Work Order Generation" },
     { href: "/workorder-scheduler", label: "Work Order Scheduler" },
     { href: "/agent-sandbox", label: "Agent Sandbox" },
+    { href: "/cerebra-demo", label: "Cerebra Demo" },
   ];
 
   return (

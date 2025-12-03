@@ -1,12 +1,13 @@
 # Agentic Predictive Maintenance System
 
-Manufacturers are moving beyond traditional predictive maintenance—it's not just about forecasting failures, but about acting on issues instantly and autonomously. This project demonstrates how agentic AI, orchestrated by LangGraph.js and powered by MongoDB Atlas and AWS Bedrock, enables multi-agent systems that detect problems and coordinate rapid, intelligent responses across the shop floor. 
+Manufacturers are moving beyond traditional predictive maintenance—it's not just about forecasting failures, but about acting on issues instantly and autonomously. This project demonstrates how agentic AI, orchestrated by LangGraph.js and powered by MongoDB Atlas and Azure OpenAI (or OpenAI/Anthropic), enables multi-agent systems that detect problems and coordinate rapid, intelligent responses across the shop floor. 
 
 This demo showcases:
 
 - **Autonomous action:** AI agents diagnose, plan, and execute maintenance tasks in real time, minimizing human intervention and downtime.
 - **Operational agility:** The system adapts to new data, equipment, and workflows, supporting continuous improvement.
 - **Unified, scalable data foundation:** MongoDB makes it easy to build, operate, and evolve agentic AI solutions—handling diverse data, enabling fast search, and supporting real-time decision-making.
+- **Enterprise-ready:** Supports Azure OpenAI Service for production deployments with Microsoft ecosystem integration.
 
 ## Architecture
 
@@ -15,7 +16,7 @@ This demo showcases:
 **How it works:**
 
 1. **Detection:** Agents monitor machine telemetry and logs, triggering alerts on anomalies.
-2. **Diagnosis:** The Failure Agent uses MongoDB’s flexible data model and vector search to rapidly analyze root causes.
+2. **Diagnosis:** The Failure Agent uses MongoDB's flexible data model and vector search to rapidly analyze root causes.
 3. **Action:** The Work Order Agent drafts and routes maintenance tasks, leveraging historical data and inventory.
 4. **Optimization:** The Planning Agent schedules work to minimize disruption, using real-time production and staff data.
 
@@ -33,49 +34,58 @@ This architecture lets manufacturers automate not just prediction, but coordinat
 
 - Node.js 18+
 - MongoDB (local or Atlas)
-- AWS Account with Bedrock access
-- AWS CLI installed locally
+- LLM API access (one of the following):
+  - Azure OpenAI Service (recommended for enterprise)
+  - OpenAI API
+  - Anthropic API
 
 ### Setup
 
-1. **Configure AWS credentials for Bedrock access:**
-   Run one of the following commands to set up your AWS credentials locally:
-
-   ```bash
-   aws configure
-   ```
-
-   Or with SSO (recommended):
-
-   ```bash
-   aws configure sso
-   ```
-
-2. **Install dependencies:**
+1. **Install dependencies:**
 
    ```bash
    npm install
    ```
 
-3. **Set up environment variables:**
-   Copy the example environment file and update it with your credentials:
+2. **Set up environment variables:**
+   Create a `.env` file in the project root with your configuration:
 
-   ```bash
-   cp .env.example .env
-   ```
-
-   Then edit your `.env` file and set the following variables:
-
+   **For Azure OpenAI (Production/Enterprise):**
    ```env
-   MONGODB_URI="<your-mongodb-uri>"
-   DATABASE_NAME="agentic_predictive_maintenance"
-   AWS_REGION="us-east-1"
-   AWS_PROFILE="default"
-   COMPLETION_MODEL="us.anthropic.claude-3-5-haiku-20241022-v1:0"
-   EMBEDDING_MODEL="cohere.embed-english-v3"
+   LLM_PROVIDER=azure
+   AZURE_OPENAI_API_KEY=your-azure-openai-api-key
+   AZURE_OPENAI_ENDPOINT=https://your-instance.openai.azure.com
+   AZURE_DEPLOYMENT_NAME=gpt-4o
+   AZURE_EMBEDDING_DEPLOYMENT=text-embedding-3-small
+   AZURE_API_VERSION=2024-08-01-preview
+   
+   MONGODB_URI=your-mongodb-connection-string
+   DATABASE_NAME=agentic_predictive_maintenance
    ```
 
-4. **Seed the demo database:**
+   **For OpenAI (Development/Prototype):**
+   ```env
+   LLM_PROVIDER=openai
+   OPENAI_API_KEY=sk-your-openai-api-key
+   OPENAI_MODEL=gpt-4o-mini
+   OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+   
+   MONGODB_URI=your-mongodb-connection-string
+   DATABASE_NAME=agentic_predictive_maintenance
+   ```
+
+   **For Anthropic:**
+   ```env
+   LLM_PROVIDER=anthropic
+   ANTHROPIC_API_KEY=sk-ant-your-anthropic-api-key
+   ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+   OPENAI_API_KEY=sk-your-openai-key  # Still needed for embeddings
+   
+   MONGODB_URI=your-mongodb-connection-string
+   DATABASE_NAME=agentic_predictive_maintenance
+   ```
+
+3. **Seed the demo database:**
    To initialize the demo with all required collections, embeddings, and indexes, run:
 
    ```bash
@@ -84,7 +94,7 @@ This architecture lets manufacturers automate not just prediction, but coordinat
 
    This step ensures your database is ready for the demo application.
 
-5. **Start the application:**
+4. **Start the application:**
    You can now launch the app in development mode:
 
    ```bash
@@ -98,6 +108,17 @@ This architecture lets manufacturers automate not just prediction, but coordinat
    ```
 
 Open [http://localhost:8080](http://localhost:8080) in your browser to explore the demo.
+
+## Cerebra Command Center Demo
+
+The application includes a **Cerebra Command Center** demo at `/cerebra-demo` showcasing multi-agent orchestration for mining operations:
+
+- **Mining Operations Center:** Real-time process flow visualization
+- **Multi-Agent Analysis:** Watch AI agents collaborate to diagnose issues
+- **Trusted Huddle:** Visual representation of agent collaboration
+- **Action Recommendations:** AI-generated maintenance recommendations
+
+This demo is designed for enterprise presentations and showcases the power of AI-driven industrial operations.
 
 ## Personalizing and Extending the Demo
 
@@ -131,7 +152,7 @@ This demo is designed to be flexible and extensible. Here are some ways you can 
       embeddingField: "embedding",
       indexName: "default",
       similarity: "cosine",
-      numDimensions: 1024, // This value depends on the embedding model selected
+      numDimensions: 1536, // OpenAI text-embedding-3-small
     },
     // Add more collections as needed
   ];
@@ -140,7 +161,7 @@ This demo is designed to be flexible and extensible. Here are some ways you can 
   - `collection`: The MongoDB collection name.
   - `textFields`: Array of fields to concatenate and embed.
   - `embeddingField`: Field name to store the embedding.
-  - `indexName`, `similarity`, `numDimensions`: Vector index settings. **Note:** `numDimensions` should match the output dimension of your selected embedding model.
+  - `indexName`, `similarity`, `numDimensions`: Vector index settings. **Note:** `numDimensions` should match the output dimension of your selected embedding model (1536 for OpenAI embeddings).
 
 ### Creating New Agents and Tools
 

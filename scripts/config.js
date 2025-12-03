@@ -1,4 +1,5 @@
-// Example configuration for embedding and vector search indexing
+// Configuration for embedding and vector search indexing
+// Using OpenAI text-embedding-3-small (1536 dimensions)
 const config = [
   {
     collection: "interviews",
@@ -6,7 +7,7 @@ const config = [
     embeddingField: "embedding",
     indexName: "default",
     similarity: "cosine",
-    numDimensions: 1024,
+    numDimensions: 1536,
   },
   {
     collection: "manuals",
@@ -14,7 +15,7 @@ const config = [
     embeddingField: "embedding",
     indexName: "default",
     similarity: "cosine",
-    numDimensions: 1024,
+    numDimensions: 1536,
   },
   {
     collection: "workorders",
@@ -22,7 +23,7 @@ const config = [
     embeddingField: "embedding",
     indexName: "default",
     similarity: "cosine",
-    numDimensions: 1024,
+    numDimensions: 1536,
   },
 ];
 export default config;
