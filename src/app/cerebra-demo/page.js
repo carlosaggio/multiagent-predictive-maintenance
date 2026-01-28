@@ -12,6 +12,13 @@ import { notifications } from "./data/miningData";
 import { workflowQuestions, faultTreeOptions } from "./data/workflowQuestions";
 import { useDynamicAgents } from "./hooks/useDynamicAgents";
 
+// WAIO imports
+import { DOMAIN_MODES, DOMAIN_MODE_IDS, DEFAULT_DOMAIN_MODE } from "./domains/domainModes";
+import { waioNotifications } from "./data/waio/waioNotifications";
+import { waioWorkflowQuestions, waioStageConfig, waioObjectiveWeights } from "./data/waio/waioWorkflowQuestions";
+import { waioShift } from "./data/waio/waioScenarioContext";
+import { WAIOKPIStrip } from "./components/waio";
+
 // Scene states
 const SCENES = {
   LOGIN: "login",
@@ -23,11 +30,19 @@ export default function CerebraDemo() {
   const [currentScene, setCurrentScene] = useState(SCENES.LOGIN);
   const [showNotifications, setShowNotifications] = useState(false);
   
+  // Domain mode state
+  const [domainMode, setDomainMode] = useState(DEFAULT_DOMAIN_MODE);
+  const activeDomain = DOMAIN_MODES[domainMode];
+  
   // Workflow state
   const [currentQuestionId, setCurrentQuestionId] = useState('q1');
   const [answeredQuestions, setAnsweredQuestions] = useState([]);
   const [isConversationLocked, setIsConversationLocked] = useState(false);
   const [selectedScenario, setSelectedScenario] = useState(null);
+  
+  // WAIO-specific state
+  const [selectedObjective, setSelectedObjective] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState(null);
   
   // Output console state
   const [outputStage, setOutputStage] = useState(null);
@@ -45,11 +60,57 @@ export default function CerebraDemo() {
     runHuddleWorkflow,
     reset: resetAgents,
   } = useDynamicAgents();
+  
+  // Helper to get active workflow questions based on domain
+  const getActiveWorkflowQuestions = () => {
+    return domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER 
+      ? waioWorkflowQuestions 
+      : workflowQuestions;
+  };
+  
+  // Helper to get active notifications based on domain
+  const getActiveNotifications = () => {
+    return domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER
+      ? waioNotifications
+      : notifications;
+  };
+  
+  // Handle domain mode switch
+  const handleDomainModeSwitch = useCallback((newMode) => {
+    if (newMode === domainMode) return;
+    
+    setDomainMode(newMode);
+    
+    // Reset all conversation and workflow state
+    setCurrentQuestionId(newMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER ? 'waio_q1' : 'q1');
+    setAnsweredQuestions([]);
+    setIsConversationLocked(false);
+    setSelectedScenario(null);
+    setSelectedObjective(null);
+    setSelectedPlan(null);
+    setOutputStage(null);
+    setShowKnowledgeGraph(false);
+    setChatResponse(null);
+    resetAgents();
+  }, [domainMode, resetAgents]);
 
   // Get current question object
   const getCurrentQuestion = () => {
-    if (!currentQuestionId) return null;
+    if (!currentQuestionId) {
+      console.log('getCurrentQuestion: No currentQuestionId');
+      return null;
+    }
+    
+    // WAIO mode uses waioWorkflowQuestions
+    if (domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER) {
+      const question = waioWorkflowQuestions[currentQuestionId];
+      console.log('getCurrentQuestion (WAIO):', { domainMode, currentQuestionId, questionFound: !!question, questionText: question?.text?.substring(0, 50) });
+      return question;
+    }
+    
+    // Maintenance mode uses workflowQuestions
     const question = workflowQuestions[currentQuestionId];
+    console.log('getCurrentQuestion (Maintenance):', { domainMode, currentQuestionId, questionFound: !!question });
     
     // For Q3, populate dynamic options from fault tree
     if (question && question.isDynamic) {
@@ -77,21 +138,37 @@ export default function CerebraDemo() {
   useEffect(() => {
     console.log('SCENE CHANGED TO:', currentScene);
   }, [currentScene]);
+  
+  // Debug: Log question changes
+  useEffect(() => {
+    console.log('QUESTION CHANGED TO:', currentQuestionId);
+  }, [currentQuestionId]);
 
   // Handle clicking on equipment in digital twin
   const handleEquipmentClick = useCallback((equipmentId) => {
-    if (equipmentId === 'primary_crusher') {
+    console.log('handleEquipmentClick:', { equipmentId, domainMode });
+    // In WAIO mode, any clickable element triggers the WAIO workflow
+    // In maintenance mode, only primary_crusher triggers analysis
+    const shouldTrigger = domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER || equipmentId === 'primary_crusher';
+    
+    if (shouldTrigger) {
+      // Reset analysis state - use correct starting question based on domain mode
+      const startingQuestion = domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER ? 'waio_q1' : 'q1';
+      console.log('Starting analysis with question:', startingQuestion);
+      
       setCurrentScene(SCENES.ANALYSIS);
-      // Reset analysis state
-      setCurrentQuestionId('q1');
+      setCurrentQuestionId(startingQuestion);
       setAnsweredQuestions([]);
       setIsConversationLocked(false);
       setSelectedScenario(null);
       setOutputStage(null);
+      // Reset WAIO-specific state
+      setSelectedObjective(null);
+      setSelectedPlan(null);
       // Reset dynamic agents
       resetAgents();
     }
-  }, [resetAgents]);
+  }, [resetAgents, domainMode]);
 
   // Handle notification click
   const handleNotificationClick = useCallback((notification) => {
@@ -103,7 +180,9 @@ export default function CerebraDemo() {
 
   // Handle answer in conversation panel
   const handleAnswer = useCallback((questionId, optionId) => {
-    const question = workflowQuestions[questionId];
+    console.log('handleAnswer called:', { questionId, optionId, domainMode });
+    const activeQuestions = getActiveWorkflowQuestions();
+    const question = activeQuestions[questionId];
     const timestamp = new Date().toLocaleTimeString();
     
     // Record the answer
@@ -114,7 +193,67 @@ export default function CerebraDemo() {
       timestamp
     }]);
 
-    // Handle different question flows
+    // Handle WAIO question flows
+    if (domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER) {
+      switch (questionId) {
+        case 'waio_q1':
+          if (optionId === 'yes') {
+            setCurrentQuestionId('waio_q2');
+            setOutputStage('waio_agent_network');
+          }
+          break;
+          
+        case 'waio_q2':
+          if (optionId === 'yes') {
+            setIsConversationLocked(true);
+            setOutputStage('waio_deviation_trace');
+          } else {
+            setCurrentQuestionId('waio_q3');
+          }
+          break;
+          
+        case 'waio_q3': {
+          // User selected an objective - proceed to parallel huddle question
+          console.log('WAIO Q3 answered:', optionId, '- advancing to Q4');
+          setSelectedObjective(optionId);
+          setCurrentQuestionId('waio_q4');
+          break;
+        }
+          
+        case 'waio_q4':
+          if (optionId === 'yes') {
+            setIsConversationLocked(true);
+            setOutputStage('waio_parallel_huddle');
+          }
+          break;
+          
+        case 'waio_q5':
+          // User selected a plan option
+          setSelectedPlan(optionId === 'plan_a' ? 'PLAN-A' : optionId === 'plan_b' ? 'PLAN-B' : 'PLAN-C');
+          setCurrentQuestionId('waio_q6');
+          setOutputStage('waio_shift_plan');
+          break;
+          
+        case 'waio_q6':
+          if (optionId === 'yes') {
+            setIsConversationLocked(true);
+            setOutputStage('waio_publish');
+          } else {
+            setCurrentQuestionId('waio_q5');
+            setOutputStage('waio_plan_options');
+          }
+          break;
+          
+        case 'waio_q7':
+          if (optionId === 'yes') {
+            setOutputStage('waio_monitor');
+          }
+          break;
+      }
+      return;
+    }
+
+    // Handle maintenance mode question flows
     switch (questionId) {
       case 'q1':
         if (optionId === 'yes') {
@@ -161,10 +300,49 @@ export default function CerebraDemo() {
         }
         break;
     }
-  }, []);
+  }, [domainMode]);
 
   // Handle stage completion from output console
   const handleStageComplete = useCallback((stage) => {
+    // Handle WAIO stages
+    if (domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER) {
+      switch (stage) {
+        case 'waio_agent_network':
+          // Continue to next question
+          break;
+          
+        case 'waio_deviation_trace':
+          setIsConversationLocked(false);
+          setCurrentQuestionId('waio_q3');
+          break;
+          
+        case 'waio_parallel_huddle':
+          setIsConversationLocked(false);
+          setCurrentQuestionId('waio_q5');
+          setOutputStage('waio_plan_options');
+          break;
+          
+        case 'waio_plan_options':
+          // Wait for user selection
+          break;
+          
+        case 'waio_shift_plan':
+          // Wait for user to publish
+          break;
+          
+        case 'waio_publish':
+          setIsConversationLocked(false);
+          setCurrentQuestionId('waio_q7');
+          break;
+          
+        case 'waio_monitor':
+          // Final stage - demo complete
+          break;
+      }
+      return;
+    }
+    
+    // Handle maintenance stages
     switch (stage) {
       case 'initial_analysis':
         // Show Q3 with dynamic options
@@ -184,7 +362,7 @@ export default function CerebraDemo() {
         setCurrentQuestionId('q6');
         break;
     }
-  }, []);
+  }, [domainMode]);
 
   // Handle scenario selection from fault tree in output console
   const handleSelectScenario = useCallback((scenario) => {
@@ -222,23 +400,70 @@ export default function CerebraDemo() {
       {currentScene === SCENES.OVERVIEW && (
         <>
           <CerebraHeader
-            title="Copper Mine Operations Center - Digital Twin"
+            title={activeDomain.headerTitle}
             onNotificationClick={() => setShowNotifications(!showNotifications)}
-            notificationCount={notifications.filter((n) => n.severity === "critical").length}
+            notificationCount={getActiveNotifications().filter((n) => n.severity === "critical").length}
           />
           <main style={{ 
             flex: 1, 
             padding: '16px',
             overflow: 'auto',
-            background: '#F5F7FA'
+            background: '#F5F7FA',
+            display: 'flex',
+            flexDirection: 'column',
           }}>
+            {/* Domain Mode Toggle */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '16px',
+            }}>
+              <div style={{
+                display: 'inline-flex',
+                background: 'white',
+                borderRadius: '8px',
+                padding: '4px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              }}>
+                {Object.values(DOMAIN_MODES).map(mode => (
+                  <button
+                    key={mode.id}
+                    onClick={() => handleDomainModeSwitch(mode.id)}
+                    style={{
+                      padding: '10px 20px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      background: domainMode === mode.id ? '#A100FF' : 'transparent',
+                      color: domainMode === mode.id ? 'white' : '#6B7280',
+                    }}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* WAIO KPI Strip (only in WAIO mode) */}
+            {domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER && (
+              <WAIOKPIStrip kpis={waioShift.kpis} />
+            )}
+            
             {/* DIGITAL TWIN - Mining Process Flow SVG Diagram */}
-            <MiningProcessFlowDiagram onEquipmentClick={handleEquipmentClick} />
+            <div style={{ flex: 1 }}>
+              <MiningProcessFlowDiagram 
+                onEquipmentClick={handleEquipmentClick}
+                mode={domainMode}
+              />
+            </div>
           </main>
           <NotificationPanel
             isOpen={showNotifications}
             onClose={() => setShowNotifications(false)}
-            notifications={notifications}
+            notifications={getActiveNotifications()}
             onNotificationClick={handleNotificationClick}
           />
         </>
@@ -248,7 +473,7 @@ export default function CerebraDemo() {
       {currentScene === SCENES.ANALYSIS && (
         <>
           <CerebraHeader
-            title="Primary Crusher Efficiency Analysis"
+            title={activeDomain.analysisTitle}
             showBackButton
             onBack={() => setCurrentScene(SCENES.OVERVIEW)}
           />
@@ -284,6 +509,7 @@ export default function CerebraDemo() {
                   color: opt.color
                 })) : null}
                 onChatResponse={handleChatResponse}
+                domainMode={domainMode}
               />
             </div>
 
@@ -309,6 +535,11 @@ export default function CerebraDemo() {
                 queryAgent={queryAgent}
                 runHuddleWorkflow={runHuddleWorkflow}
                 chatResponse={chatResponse}
+                // WAIO props
+                domainMode={domainMode}
+                selectedObjective={selectedObjective}
+                selectedPlan={selectedPlan}
+                onSelectPlan={setSelectedPlan}
               />
             </div>
           </main>

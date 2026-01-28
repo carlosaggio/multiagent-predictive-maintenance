@@ -12,6 +12,18 @@ import ActionableRecommendations from "./ActionableRecommendations";
 import AgentNetworkDisplay from "./AgentNetworkDisplay";
 import { huddleAgents, recommendations } from "../data/workflowQuestions";
 
+// WAIO imports
+import { DOMAIN_MODE_IDS } from "../domains/domainModes";
+import {
+  WAIOAgentNetworkStage,
+  WAIODeviationTraceStage,
+  WAIOParallelHuddleStage,
+  WAIOPlanOptionsStage,
+  WAIOShiftPlanStage,
+  WAIOPublishStage,
+  WAIOMonitorStage,
+} from "./outputStages/waio";
+
 // Dynamic imports for Nivo charts (client-side only)
 const EfficiencyTrendChart = dynamic(
   () => import('./charts/EfficiencyTrendChart'),
@@ -285,7 +297,14 @@ export default function OutputConsole({
   runHuddleWorkflow,
   // Chat response from chatbot
   chatResponse = null,
+  // WAIO props
+  domainMode = DOMAIN_MODE_IDS.MAINTENANCE,
+  selectedObjective = null,
+  selectedPlan = null,
+  onSelectPlan = null,
 }) {
+  // Check if in WAIO mode
+  const isWAIOMode = domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER;
   const [activeAgentIndex, setActiveAgentIndex] = useState(-1);
   const [visibleSteps, setVisibleSteps] = useState({});
   const [huddleComplete, setHuddleComplete] = useState(false);
@@ -585,8 +604,47 @@ export default function OutputConsole({
           </div>
         )}
 
-        {/* Agent Network Display - shows after Q1 is answered */}
-        {currentStage === 'agent_network' && (
+        {/* WAIO Stages */}
+        {isWAIOMode && currentStage === 'waio_agent_network' && (
+          <WAIOAgentNetworkStage onComplete={() => onStageComplete?.('waio_agent_network')} />
+        )}
+
+        {isWAIOMode && currentStage === 'waio_deviation_trace' && (
+          <WAIODeviationTraceStage onComplete={() => onStageComplete?.('waio_deviation_trace')} />
+        )}
+
+        {isWAIOMode && currentStage === 'waio_parallel_huddle' && (
+          <WAIOParallelHuddleStage 
+            onComplete={() => onStageComplete?.('waio_parallel_huddle')}
+            selectedObjective={selectedObjective}
+          />
+        )}
+
+        {isWAIOMode && currentStage === 'waio_plan_options' && (
+          <WAIOPlanOptionsStage 
+            onComplete={() => onStageComplete?.('waio_plan_options')}
+            onSelectPlan={onSelectPlan}
+            selectedPlan={selectedPlan}
+          />
+        )}
+
+        {isWAIOMode && currentStage === 'waio_shift_plan' && (
+          <WAIOShiftPlanStage 
+            onComplete={() => onStageComplete?.('waio_shift_plan')}
+            selectedPlan={selectedPlan}
+          />
+        )}
+
+        {isWAIOMode && currentStage === 'waio_publish' && (
+          <WAIOPublishStage onComplete={() => onStageComplete?.('waio_publish')} />
+        )}
+
+        {isWAIOMode && currentStage === 'waio_monitor' && (
+          <WAIOMonitorStage onComplete={() => onStageComplete?.('waio_monitor')} />
+        )}
+
+        {/* Agent Network Display - shows after Q1 is answered (Maintenance mode) */}
+        {!isWAIOMode && currentStage === 'agent_network' && (
           <div style={{ marginBottom: '24px' }}>
             <AgentNetworkDisplay isActive={true} />
           </div>

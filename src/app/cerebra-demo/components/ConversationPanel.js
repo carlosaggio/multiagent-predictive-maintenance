@@ -55,7 +55,9 @@ export default function ConversationPanel({
   enableChat = true,
   onTriggerAgent,
   onChatResponse, // Send responses to Output Console
+  domainMode = 'maintenance', // 'maintenance' or 'waioShiftOptimiser'
 }) {
+  const isWAIOMode = domainMode === 'waioShiftOptimiser';
   const [selectedOption, setSelectedOption] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [chatInput, setChatInput] = useState('');
@@ -430,9 +432,15 @@ export default function ConversationPanel({
         gap: '10px'
       }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+          {isWAIOMode ? (
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+          ) : (
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+          )}
         </svg>
-        <span style={{ color: 'white', fontSize: '14px', fontWeight: '600' }}>Maintenance Assistant</span>
+        <span style={{ color: 'white', fontSize: '14px', fontWeight: '600' }}>
+          {isWAIOMode ? 'Shift Planning Assistant' : 'Maintenance Assistant'}
+        </span>
         <div style={{ 
           marginLeft: 'auto', 
           fontSize: '10px', 
@@ -474,6 +482,7 @@ export default function ConversationPanel({
             onSelect={handleOptionSelect}
             isSubmitting={isSubmitting}
             isFirstQuestion={answeredQuestions.length === 0}
+            isWAIOMode={isWAIOMode}
           />
         )}
 
@@ -550,7 +559,9 @@ export default function ConversationPanel({
         }}>
           <input
             type="text"
-            placeholder={chatEnabled ? "Ask about WO status, parts, liner, reliability..." : "Complete workflow to enable chat"}
+            placeholder={chatEnabled 
+              ? (isWAIOMode ? "Ask about trains, grades, stockpiles, logistics..." : "Ask about WO status, parts, liner, reliability...") 
+              : "Complete workflow to enable chat"}
             disabled={!chatEnabled || isChatLoading || showCachePrompt}
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
@@ -753,11 +764,18 @@ function CachePrompt({ onChoice }) {
   );
 }
 
-// LLM Generation stages - shown before question appears
-const GENERATION_STAGES = [
+// LLM Generation stages - shown before question appears (maintenance mode)
+const GENERATION_STAGES_MAINTENANCE = [
   { text: 'Super Agent processing context...', icon: 'brain', duration: 1100 },
   { text: 'Analyzing maintenance scenario...', icon: 'analyze', duration: 950 },
   { text: 'Generating response...', icon: 'generate', duration: 1200 },
+];
+
+// LLM Generation stages - shown before question appears (WAIO mode)
+const GENERATION_STAGES_WAIO = [
+  { text: 'Shift Optimiser processing context...', icon: 'brain', duration: 1100 },
+  { text: 'Analyzing value chain constraints...', icon: 'analyze', duration: 950 },
+  { text: 'Generating recommendation...', icon: 'generate', duration: 1200 },
 ];
 
 // Question Generator - shows LLM-style generation before the question
@@ -767,8 +785,10 @@ function QuestionGenerator({
   selectedOption,
   onSelect,
   isSubmitting,
-  isFirstQuestion
+  isFirstQuestion,
+  isWAIOMode = false,
 }) {
+  const GENERATION_STAGES = isWAIOMode ? GENERATION_STAGES_WAIO : GENERATION_STAGES_MAINTENANCE;
   const [phase, setPhase] = useState('generating'); // 'generating' | 'streaming' | 'complete'
   const [generationStage, setGenerationStage] = useState(0);
   const [displayedText, setDisplayedText] = useState('');
