@@ -1,12 +1,60 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { pdf } from '@react-pdf/renderer';
+import ShiftBriefPDF, { defaultShiftBriefData } from './ShiftBriefPDF';
 
 /**
  * Shift Brief Preview Component
  * 
- * Document-like preview of the generated shift brief.
+ * Document-like preview of the generated shift brief with Accenture-branded PDF download.
  */
+
+// Toast notification component
+function Toast({ message, type = 'success', isVisible, onClose }) {
+  useEffect(() => {
+    if (isVisible) {
+      const timer = setTimeout(onClose, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isVisible, onClose]);
+
+  if (!isVisible) return null;
+
+  const bgColor = type === 'success' ? '#10B981' : type === 'error' ? '#EF4444' : '#F59E0B';
+
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: '24px',
+      right: '24px',
+      padding: '14px 20px',
+      background: bgColor,
+      borderRadius: '8px',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      zIndex: 10000,
+      animation: 'slideIn 0.3s ease-out',
+    }}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+        {type === 'success' ? (
+          <polyline points="20 6 9 17 4 12"/>
+        ) : (
+          <circle cx="12" cy="12" r="10"/>
+        )}
+      </svg>
+      <span style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>{message}</span>
+      <style jsx>{`
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+}
 
 // Section component
 function Section({ title, children, icon }) {
@@ -173,19 +221,56 @@ export default function ShiftBriefPreview({
 }) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
 
-  const handleDownload = () => {
+  const showToast = (message, type = 'success') => {
+    setToast({ visible: true, message, type });
+  };
+
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, visible: false }));
+  };
+
+  const handleDownload = async () => {
     setIsDownloading(true);
-    setTimeout(() => {
+    
+    try {
+      // Prepare PDF data with current shift info
+      const pdfData = {
+        ...defaultShiftBriefData,
+        shiftId: shiftId,
+        planName: planName,
+        generatedAt: new Date(generatedAt).toLocaleString(),
+      };
+      
+      // Generate PDF blob
+      const pdfBlob = await pdf(<ShiftBriefPDF data={pdfData} />).toBlob();
+      
+      // Create and download the PDF file
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${shiftId}_ShiftBrief.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
       setIsDownloading(false);
+      showToast('Shift brief PDF downloaded successfully!', 'success');
       onDownload?.();
-    }, 1500);
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      setIsDownloading(false);
+      showToast('Failed to generate PDF. Please try again.', 'error');
+    }
   };
 
   const handleSend = () => {
     setIsSending(true);
     setTimeout(() => {
       setIsSending(false);
+      showToast('Shift brief sent to Teams channel', 'success');
       onSend?.();
     }, 1500);
   };
@@ -440,6 +525,14 @@ export default function ShiftBriefPreview({
           )}
         </button>
       </div>
+
+      {/* Toast notification */}
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        isVisible={toast.visible} 
+        onClose={hideToast} 
+      />
     </div>
   );
 }

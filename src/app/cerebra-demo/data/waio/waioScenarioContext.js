@@ -639,6 +639,247 @@ export const waioPublishedPlan = {
   briefId: 'BRIEF-2025-01-15-DAY-001',
 };
 
+// ============================================================================
+// CLOSED-LOOP MINE PLANNING DATA (New Enhancement)
+// ============================================================================
+
+// Plan Stack - Multi-horizon planning hierarchy
+export const waioPlanStack = {
+  '90D': {
+    id: '90D_PLAN_v08',
+    horizon: '90 Day',
+    version: 'v8',
+    effectiveFrom: '2025-01-01',
+    effectiveTo: '2025-03-31',
+    status: 'active',
+    owner: 'Strategic Planning',
+    kpis: {
+      targetTonnage: 14500000,
+      actualTonnage: 5800000,
+      progress: 0.40,
+      complianceTarget: 0.92,
+      actualCompliance: 0.88,
+    },
+    topConstraints: ['Vessel scheduling', 'Quarterly contract volumes', 'Major shutdown window'],
+    deviationSignal: 'amber', // green/amber/red
+    deviationReason: 'Throughput 4% below trajectory due to weather events',
+  },
+  '30D': {
+    id: '30D_PLAN_v15',
+    horizon: '30 Day',
+    version: 'v15',
+    effectiveFrom: '2025-01-15',
+    effectiveTo: '2025-02-14',
+    status: 'active',
+    owner: 'Mine Planning',
+    kpis: {
+      targetTonnage: 4800000,
+      actualTonnage: 2100000,
+      progress: 0.44,
+      complianceTarget: 0.90,
+      actualCompliance: 0.85,
+    },
+    topConstraints: ['Blast schedule', 'Stockpile capacity', 'Rail maintenance window'],
+    deviationSignal: 'amber',
+    deviationReason: 'Grade drift in Pit 3 Zone B affecting blend quality',
+  },
+  '7D': {
+    id: '7D_PLAN_v12',
+    horizon: '7 Day',
+    version: 'v12',
+    effectiveFrom: '2025-01-15',
+    effectiveTo: '2025-01-22',
+    status: 'active',
+    owner: 'Short-term Planning',
+    kpis: {
+      targetTonnage: 1085000,
+      actualTonnage: 445000,
+      progress: 0.41,
+      complianceTarget: 0.88,
+      actualCompliance: 0.82,
+    },
+    topConstraints: ['TRK-12 breakdown', 'Assay lag Pit 3 ZB', 'SP-3 confidence'],
+    deviationSignal: 'red',
+    deviationReason: 'Multiple equipment/quality issues driving compliance below target',
+  },
+  'DAY': {
+    id: 'DAY_PLAN_2025-01-15',
+    horizon: 'Day',
+    version: 'v3',
+    effectiveFrom: '2025-01-15T00:00',
+    effectiveTo: '2025-01-16T00:00',
+    status: 'active',
+    owner: 'Shift Coordinator',
+    kpis: {
+      targetTonnage: 155000,
+      actualTonnage: 98000,
+      progress: 0.63,
+      complianceTarget: 0.85,
+      actualCompliance: 0.78,
+    },
+    topConstraints: ['Train-07 grade risk', 'Haul road A closure'],
+    deviationSignal: 'red',
+    deviationReason: 'Train-07 forecast under-spec; corrective blend in progress',
+  },
+  'SHIFT': {
+    id: 'SHIFT-2025-01-15-DAY',
+    horizon: 'Shift',
+    version: 'v3',
+    effectiveFrom: '2025-01-15T06:00',
+    effectiveTo: '2025-01-15T18:00',
+    status: 'executing',
+    owner: 'Carlos Aggio',
+    kpis: {
+      targetTonnage: 78000,
+      actualTonnage: 52000,
+      progress: 0.67,
+      complianceTarget: 0.84,
+      actualCompliance: 0.78,
+    },
+    topConstraints: ['Active replan for Train-07'],
+    deviationSignal: 'amber',
+    deviationReason: 'Corrective actions in progress; monitoring closely',
+  },
+};
+
+// Reconciliation data - Plan vs Actual analysis
+export const waioReconciliation = {
+  shiftId: 'SHIFT-2025-01-15-DAY',
+  reconciliationTime: '2025-01-15T18:00:00+08:00',
+  summary: {
+    planCompliance: 0.78,
+    complianceTarget: 0.85,
+    gap: -0.07,
+    tonnageActual: 145327,
+    tonnageTarget: 155000,
+    tonnageVariance: -9673,
+    gradeActualFe: 62.05,
+    gradeTargetFe: 62.4,
+    gradeVariance: -0.35,
+    valueProtected: 560000,
+    valueAtRiskOriginal: 740000,
+    valueAtRiskFinal: 180000,
+  },
+  planVsActual: [
+    { metric: 'Tonnes Loaded', planned: 155000, actual: 145327, variance: -6.2, unit: 't', status: 'warning' },
+    { metric: 'Train-07 Fe Grade', planned: 62.05, actual: 62.08, variance: 0.05, unit: '%', status: 'good' },
+    { metric: 'Train-08 Fe Grade', planned: 62.20, actual: 62.15, variance: -0.08, unit: '%', status: 'good' },
+    { metric: 'Compliance Rate', planned: 0.84, actual: 0.78, variance: -7.1, unit: '%', status: 'warning' },
+    { metric: 'Under-Spec Trains', planned: 0, actual: 0, variance: 0, unit: 'count', status: 'good' },
+    { metric: 'Unplanned Delays', planned: 0, actual: 2, variance: 2, unit: 'count', status: 'warning' },
+  ],
+  deviationHeatmap: {
+    boundaryPoints: ['Pit', 'ROM', 'Stockpile', 'Loadout', 'Port'],
+    causeCategories: ['Grade Drift', 'Data Lag', 'Unrecorded Mvmt', 'Equipment', 'Weather'],
+    data: [
+      // [Pit row]
+      [3, 2, 0, 1, 0],
+      // [ROM row]
+      [1, 1, 1, 0, 0],
+      // [Stockpile row]
+      [2, 3, 4, 0, 0],
+      // [Loadout row]
+      [1, 2, 1, 2, 0],
+      // [Port row]
+      [0, 0, 0, 1, 1],
+    ],
+    legend: { 0: 'None', 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Critical' },
+  },
+  repeatDrivers: [
+    {
+      id: 'RD-01',
+      pattern: 'Pit 3 Zone B grade uncertainty',
+      frequency: '3 of last 5 shifts',
+      impact: 'High',
+      rootCause: 'Assay lag (6h) + geological variability',
+      recommendation: 'Increase sampling frequency; add blast hole assays',
+    },
+    {
+      id: 'RD-02',
+      pattern: 'SP-3 confidence drops',
+      frequency: '4 of last 7 days',
+      impact: 'Medium',
+      rootCause: 'Unrecorded dozer movements during night shift',
+      recommendation: 'Mandatory GPS logging for all stockpile dozers',
+    },
+    {
+      id: 'RD-03',
+      pattern: 'Haul road A closures',
+      frequency: '2 of last 3 days',
+      impact: 'Medium',
+      rootCause: 'Weather + maintenance scheduling conflicts',
+      recommendation: 'Pre-position alternate routes; align maintenance windows',
+    },
+  ],
+  insights: [
+    'Under-spec risk avoided on Train-07 (+$560k penalty avoided)',
+    'Plan compliance loss driven by: haul road A closure (35%), dozer rehandle gap (25%), assay latency (20%), fleet downtime (20%)',
+    'Repeat pattern: Pit3 ZoneB uncertainty spikes in 3 of last 5 shifts',
+    'Recommendation: Retrofit 7-day plan to reduce ZB dependence during high uncertainty windows',
+  ],
+};
+
+// Retrofit Change Set - Proposed plan adjustments
+export const waioRetrofitChangeSet = {
+  id: 'CHANGESET_001',
+  createdAt: '2025-01-15T18:15:00+08:00',
+  createdBy: 'Plan Retrofit Agent',
+  targetPlan: '7D_PLAN_v12',
+  rationale: 'Recurring grade drift and compliance loss pattern detected. Retrofit to prevent repeat deviations.',
+  status: 'proposed',
+  changes: [
+    {
+      id: 'CHG-01',
+      type: 'sequence_edit',
+      title: 'Shift 18kt from Pit3-ZB to Pit2-ZA on Days 2-4',
+      description: 'Reduce dependence on Zone B during high uncertainty windows until sampling regime improved.',
+      affectedEntities: ['PIT3-ZB', 'PIT2-ZA', '7D_PLAN_v12'],
+      expectedComplianceGain: 0.05,
+      expectedRiskReduction: 0.15,
+      confidence: 0.82,
+      graphLink: 'PIT3-ZB',
+    },
+    {
+      id: 'CHG-02',
+      type: 'buffer_policy',
+      title: 'Increase SP-2 minimum buffer to 95kt',
+      description: 'Maintain higher high-Fe stockpile reserve to enable rapid blend correction.',
+      affectedEntities: ['SP-2', 'CONSTRAINT_STOCKPILE_BUFFER'],
+      expectedComplianceGain: 0.03,
+      expectedRiskReduction: 0.10,
+      confidence: 0.88,
+      graphLink: 'SP-2',
+    },
+    {
+      id: 'CHG-03',
+      type: 'blast_timing',
+      title: 'Adjust blast timing to open Face C 12h earlier',
+      description: 'Accelerate access to higher-confidence Zone C material.',
+      affectedEntities: ['BLAST_WINDOW_01', 'PIT3-ZC'],
+      expectedComplianceGain: 0.02,
+      expectedRiskReduction: 0.08,
+      confidence: 0.75,
+      graphLink: 'BLAST_WINDOW_01',
+    },
+  ],
+  expectedImpacts: {
+    compliance7D: { current: 0.82, projected: 0.90, change: '+8%' },
+    underSpecRisk: { current: 0.38, projected: 0.25, change: '-34%' },
+    contractRisk: { current: 'Medium', projected: 'Low', change: 'Improved' },
+    tonnageImpact: { change: '-2%', note: 'Minor throughput trade-off for quality' },
+  },
+  blockModelUpdates: [
+    { blockId: 'PIT3-ZB-041', field: 'gradeConfidence', oldValue: 0.68, newValue: 0.72, reason: 'Updated with shift reconciliation' },
+    { blockId: 'PIT3-ZB-042', field: 'gradeBias', oldValue: 0, newValue: -0.3, reason: 'Detected systematic under-estimation' },
+  ],
+  deswikScheduleDelta: {
+    sequenceEdits: 3,
+    targetAdjustments: 2,
+    constraintChanges: 1,
+    estimatedReplanTime: '15 minutes',
+  },
+};
+
 // Combined scenario context export
 export const waioScenarioContext = {
   shift: waioShift,
@@ -655,6 +896,10 @@ export const waioScenarioContext = {
   planOptions: waioPlanOptions,
   shiftPlan: waioShiftPlan,
   publishedPlan: waioPublishedPlan,
+  // New closed-loop data
+  planStack: waioPlanStack,
+  reconciliation: waioReconciliation,
+  retrofitChangeSet: waioRetrofitChangeSet,
 };
 
 // Topic routing for chatbot

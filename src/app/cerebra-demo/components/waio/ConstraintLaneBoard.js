@@ -124,10 +124,17 @@ function ActionChip({ label, severity, onClick }) {
 }
 
 // Individual lane row component
-function LaneRow({ lane, isExpanded, onExpand, agentConfig }) {
+function LaneRow({ lane, isExpanded, onExpand, agentConfig, onLaneClick }) {
   const agent = agentConfig?.[lane.agentId] || {};
   const isRunning = lane.progress > 0 && lane.progress < 1;
   const isComplete = lane.progress >= 1;
+
+  const handleDoubleClick = (e) => {
+    e.stopPropagation();
+    if (onLaneClick && isComplete) {
+      onLaneClick(lane);
+    }
+  };
 
   return (
     <div style={{
@@ -136,8 +143,10 @@ function LaneRow({ lane, isExpanded, onExpand, agentConfig }) {
       border: `1px solid ${isExpanded ? '#A100FF' : '#E2E8F0'}`,
       marginBottom: '8px',
       overflow: 'hidden',
-      transition: 'border-color 0.2s ease',
-    }}>
+      transition: 'all 0.2s ease',
+    }}
+    onDoubleClick={handleDoubleClick}
+    >
       {/* Main row */}
       <div 
         style={{
@@ -338,6 +347,7 @@ export default function ConstraintLaneBoard({
   lanes = [], 
   agentConfig = {},
   onExpandLane,
+  onLaneClick,
   animateProgress = true,
 }) {
   const [expandedLane, setExpandedLane] = useState(null);
@@ -418,7 +428,7 @@ export default function ConstraintLaneBoard({
         </div>
       </div>
 
-      {/* Lane rows */}
+      {/* Lane rows - Double-click any completed lane for detailed analysis */}
       {animatedLanes.map(lane => (
         <LaneRow
           key={lane.id}
@@ -426,6 +436,7 @@ export default function ConstraintLaneBoard({
           isExpanded={expandedLane === lane.id}
           onExpand={handleExpand}
           agentConfig={agentConfig}
+          onLaneClick={onLaneClick}
         />
       ))}
 

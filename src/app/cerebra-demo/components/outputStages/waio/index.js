@@ -11,3 +11,8 @@ export { default as WAIOPlanOptionsStage } from './WAIOPlanOptionsStage';
 export { default as WAIOShiftPlanStage } from './WAIOShiftPlanStage';
 export { default as WAIOPublishStage } from './WAIOPublishStage';
 export { default as WAIOMonitorStage } from './WAIOMonitorStage';
+
+// Closed-loop stages (new)
+export { default as WAIOReconciliationStage } from './WAIOReconciliationStage';
+export { default as WAIOMinePlanRetrofitStage } from './WAIOMinePlanRetrofitStage';
+export { default as WAIOPublishToSystemsStage } from './WAIOPublishToSystemsStage';

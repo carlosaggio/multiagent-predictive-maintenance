@@ -11,6 +11,7 @@ export { default as PlanOptionCards } from './PlanOptionCards';
 export { default as ShiftPlanGantt } from './ShiftPlanGantt';
 export { default as BlendRecipePanel } from './BlendRecipePanel';
 export { default as ShiftBriefPreview } from './ShiftBriefPreview';
+export { default as ShiftBriefPDF, defaultShiftBriefData } from './ShiftBriefPDF';
 export { default as EventFeed } from './EventFeed';
 export { default as PlanDeltaSummary } from './PlanDeltaSummary';
 export { default as EquipmentAssignmentTable } from './EquipmentAssignmentTable';

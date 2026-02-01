@@ -22,6 +22,10 @@ import {
   WAIOShiftPlanStage,
   WAIOPublishStage,
   WAIOMonitorStage,
+  // Closed-loop stages (new)
+  WAIOReconciliationStage,
+  WAIOMinePlanRetrofitStage,
+  WAIOPublishToSystemsStage,
 } from "./outputStages/waio";
 
 // Dynamic imports for Nivo charts (client-side only)
@@ -302,6 +306,11 @@ export default function OutputConsole({
   selectedObjective = null,
   selectedPlan = null,
   onSelectPlan = null,
+  // Processing state
+  isProcessingStage = false,
+  // Graph and publish handlers
+  onOpenGraph = null,
+  onPublish = null,
 }) {
   // Check if in WAIO mode
   const isWAIOMode = domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER;
@@ -604,23 +613,51 @@ export default function OutputConsole({
           </div>
         )}
 
+        {/* Processing Indicator - shows when stage is loading */}
+        {isProcessingStage && (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '60px 20px',
+            gap: '16px',
+          }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              border: '3px solid #e2e8f0',
+              borderTopColor: '#A100FF',
+              borderRadius: '50%',
+              animation: 'processingSpinner 1s linear infinite',
+            }} />
+            <div style={{ 
+              fontSize: '13px', 
+              color: '#6b7280',
+              textAlign: 'center',
+            }}>
+              Processing request...
+            </div>
+          </div>
+        )}
+
         {/* WAIO Stages */}
-        {isWAIOMode && currentStage === 'waio_agent_network' && (
+        {isWAIOMode && currentStage === 'waio_agent_network' && !isProcessingStage && (
           <WAIOAgentNetworkStage onComplete={() => onStageComplete?.('waio_agent_network')} />
         )}
 
-        {isWAIOMode && currentStage === 'waio_deviation_trace' && (
+        {isWAIOMode && currentStage === 'waio_deviation_trace' && !isProcessingStage && (
           <WAIODeviationTraceStage onComplete={() => onStageComplete?.('waio_deviation_trace')} />
         )}
 
-        {isWAIOMode && currentStage === 'waio_parallel_huddle' && (
+        {isWAIOMode && currentStage === 'waio_parallel_huddle' && !isProcessingStage && (
           <WAIOParallelHuddleStage 
             onComplete={() => onStageComplete?.('waio_parallel_huddle')}
             selectedObjective={selectedObjective}
           />
         )}
 
-        {isWAIOMode && currentStage === 'waio_plan_options' && (
+        {isWAIOMode && currentStage === 'waio_plan_options' && !isProcessingStage && (
           <WAIOPlanOptionsStage 
             onComplete={() => onStageComplete?.('waio_plan_options')}
             onSelectPlan={onSelectPlan}
@@ -628,19 +665,36 @@ export default function OutputConsole({
           />
         )}
 
-        {isWAIOMode && currentStage === 'waio_shift_plan' && (
+        {isWAIOMode && currentStage === 'waio_shift_plan' && !isProcessingStage && (
           <WAIOShiftPlanStage 
             onComplete={() => onStageComplete?.('waio_shift_plan')}
             selectedPlan={selectedPlan}
           />
         )}
 
-        {isWAIOMode && currentStage === 'waio_publish' && (
+        {isWAIOMode && currentStage === 'waio_publish' && !isProcessingStage && (
           <WAIOPublishStage onComplete={() => onStageComplete?.('waio_publish')} />
         )}
 
-        {isWAIOMode && currentStage === 'waio_monitor' && (
+        {isWAIOMode && currentStage === 'waio_monitor' && !isProcessingStage && (
           <WAIOMonitorStage onComplete={() => onStageComplete?.('waio_monitor')} />
+        )}
+
+        {/* Closed-loop Mine Planning Stages (new) */}
+        {isWAIOMode && currentStage === 'waio_reconciliation' && !isProcessingStage && (
+          <WAIOReconciliationStage onComplete={() => onStageComplete?.('waio_reconciliation')} />
+        )}
+
+        {isWAIOMode && currentStage === 'waio_mine_plan_retrofit' && !isProcessingStage && (
+          <WAIOMinePlanRetrofitStage 
+            onComplete={() => onStageComplete?.('waio_mine_plan_retrofit')} 
+            onOpenGraph={onOpenGraph}
+            onPublish={onPublish}
+          />
+        )}
+
+        {isWAIOMode && currentStage === 'waio_publish_to_systems' && !isProcessingStage && (
+          <WAIOPublishToSystemsStage onComplete={() => onStageComplete?.('waio_publish_to_systems')} />
         )}
 
         {/* Agent Network Display - shows after Q1 is answered (Maintenance mode) */}
@@ -1008,6 +1062,9 @@ export default function OutputConsole({
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.4; }
+        }
+        @keyframes processingSpinner {
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>

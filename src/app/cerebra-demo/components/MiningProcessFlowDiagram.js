@@ -365,6 +365,390 @@ const KPICard = ({ icon, label, value, unit, change, isUp, isAlert }) => (
   </div>
 );
 
+// ============================================================================
+// IRON ORE DIGITAL TWIN (for WAIO Pit-to-Port mode)
+// ============================================================================
+
+// Iron Ore Process Node Component
+const IronOreProcessNode = ({ x, y, width, height, title, subtitle, status, onClick, isHighlighted }) => {
+  const statusColors = {
+    ok: { bg: '#ECFDF5', border: '#10B981', text: '#065F46' },
+    warning: { bg: '#FFFBEB', border: '#F59E0B', text: '#92400E' },
+    critical: { bg: '#FEF2F2', border: '#EF4444', text: '#991B1B' },
+    active: { bg: '#EEF2FF', border: '#6366F1', text: '#4338CA' },
+  };
+  const colors = statusColors[status] || statusColors.ok;
+  
+  return (
+    <g 
+      transform={`translate(${x}, ${y})`}
+      onClick={onClick}
+      style={{ cursor: onClick ? 'pointer' : 'default' }}
+    >
+      <rect
+        x={0} y={0}
+        width={width} height={height}
+        rx={6}
+        fill={isHighlighted ? colors.bg : '#FFFFFF'}
+        stroke={isHighlighted ? colors.border : '#E2E8F0'}
+        strokeWidth={isHighlighted ? 2.5 : 1.5}
+      />
+      <text
+        x={width / 2} y={height / 2 - 6}
+        textAnchor="middle"
+        fontSize={11}
+        fontWeight={600}
+        fill="#1A1A2E"
+      >
+        {title}
+      </text>
+      {subtitle && (
+        <text
+          x={width / 2} y={height / 2 + 10}
+          textAnchor="middle"
+          fontSize={9}
+          fill="#6B7280"
+        >
+          {subtitle}
+        </text>
+      )}
+      {status && (
+        <circle
+          cx={width - 10} cy={10}
+          r={5}
+          fill={colors.border}
+        />
+      )}
+    </g>
+  );
+};
+
+// Iron Ore Flow Arrow
+const IronOreFlowArrow = ({ d, animated = false }) => (
+  <path
+    d={d}
+    fill="none"
+    stroke="#A100FF"
+    strokeWidth={2}
+    strokeDasharray={animated ? "8 4" : "none"}
+    markerEnd="url(#ironOreArrow)"
+  >
+    {animated && (
+      <animate
+        attributeName="stroke-dashoffset"
+        from="12"
+        to="0"
+        dur="0.5s"
+        repeatCount="indefinite"
+      />
+    )}
+  </path>
+);
+
+// Iron Ore Digital Twin SVG Component
+const IronOreDigitalTwinSVG = ({ highlightedIds = [], onNodeClick }) => {
+  const isHighlighted = (id) => highlightedIds.includes(id);
+  
+  return (
+    <div style={{ 
+      background: 'white', 
+      borderRadius: '8px', 
+      border: '1px solid #e2e8f0',
+      padding: '20px',
+    }}>
+      <svg viewBox="0 0 1100 280" style={{ width: '100%', height: 'auto' }}>
+        {/* Arrow marker definition */}
+        <defs>
+          <marker 
+            id="ironOreArrow" 
+            markerWidth={8} 
+            markerHeight={6} 
+            refX={7} 
+            refY={3} 
+            orient="auto"
+          >
+            <polygon points="0 0, 8 3, 0 6" fill="#A100FF"/>
+          </marker>
+          <linearGradient id="ironOreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#A100FF" stopOpacity="0.1"/>
+            <stop offset="100%" stopColor="#7C3AED" stopOpacity="0.1"/>
+          </linearGradient>
+        </defs>
+        
+        {/* Background sections */}
+        <rect x="5" y="5" width="200" height="270" rx="8" fill="url(#ironOreGradient)" stroke="#E2E8F0"/>
+        <text x="105" y="25" textAnchor="middle" fontSize="10" fontWeight="600" fill="#A100FF">MINING</text>
+        
+        <rect x="215" y="5" width="280" height="270" rx="8" fill="url(#ironOreGradient)" stroke="#E2E8F0"/>
+        <text x="355" y="25" textAnchor="middle" fontSize="10" fontWeight="600" fill="#A100FF">PROCESSING & STOCKPILE</text>
+        
+        <rect x="505" y="5" width="200" height="270" rx="8" fill="url(#ironOreGradient)" stroke="#E2E8F0"/>
+        <text x="605" y="25" textAnchor="middle" fontSize="10" fontWeight="600" fill="#A100FF">RAIL LOGISTICS</text>
+        
+        <rect x="715" y="5" width="380" height="270" rx="8" fill="url(#ironOreGradient)" stroke="#E2E8F0"/>
+        <text x="905" y="25" textAnchor="middle" fontSize="10" fontWeight="600" fill="#A100FF">PORT & SHIPPING</text>
+
+        {/* Process Nodes */}
+        
+        {/* Mining Section */}
+        <IronOreProcessNode
+          x={25} y={50}
+          width={80} height={55}
+          title="Pit 1"
+          subtitle="62.8% Fe"
+          status="ok"
+          isHighlighted={isHighlighted('pit1')}
+          onClick={() => onNodeClick?.('pit1')}
+        />
+        <IronOreProcessNode
+          x={25} y={115}
+          width={80} height={55}
+          title="Pit 2"
+          subtitle="61.5% Fe"
+          status="warning"
+          isHighlighted={isHighlighted('pit2')}
+          onClick={() => onNodeClick?.('pit2')}
+        />
+        <IronOreProcessNode
+          x={25} y={180}
+          width={80} height={55}
+          title="Pit 3"
+          subtitle="60.8% Fe"
+          status="critical"
+          isHighlighted={isHighlighted('pit3')}
+          onClick={() => onNodeClick?.('pit3')}
+        />
+        
+        <IronOreProcessNode
+          x={115} y={100}
+          width={80} height={60}
+          title="Crusher"
+          subtitle="2,400 t/h"
+          status="ok"
+          isHighlighted={isHighlighted('crusher')}
+          onClick={() => onNodeClick?.('crusher')}
+        />
+
+        {/* Processing Section */}
+        <IronOreProcessNode
+          x={230} y={60}
+          width={100} height={70}
+          title="Stockpile 1"
+          subtitle="145kt | 62.1%"
+          status="ok"
+          isHighlighted={isHighlighted('sp1')}
+          onClick={() => onNodeClick?.('sp1')}
+        />
+        <IronOreProcessNode
+          x={230} y={145}
+          width={100} height={70}
+          title="Stockpile 2"
+          subtitle="98kt | 61.4%"
+          status="warning"
+          isHighlighted={isHighlighted('sp2')}
+          onClick={() => onNodeClick?.('sp2')}
+        />
+        
+        <IronOreProcessNode
+          x={355} y={100}
+          width={100} height={60}
+          title="Reclaimer"
+          subtitle="Blending"
+          status="active"
+          isHighlighted={isHighlighted('reclaimer')}
+          onClick={() => onNodeClick?.('reclaimer')}
+        />
+
+        {/* Rail Section */}
+        <IronOreProcessNode
+          x={520} y={60}
+          width={90} height={60}
+          title="Train Load"
+          subtitle="6,200 t/h"
+          status="ok"
+          isHighlighted={isHighlighted('trainload')}
+          onClick={() => onNodeClick?.('trainload')}
+        />
+        
+        <IronOreProcessNode
+          x={520} y={150}
+          width={90} height={55}
+          title="Train 07"
+          subtitle="En Route"
+          status="warning"
+          isHighlighted={isHighlighted('train07')}
+          onClick={() => onNodeClick?.('train07')}
+        />
+        
+        <IronOreProcessNode
+          x={620} y={105}
+          width={70} height={50}
+          title="Rail"
+          subtitle="420km"
+          status="ok"
+          isHighlighted={isHighlighted('rail')}
+          onClick={() => onNodeClick?.('rail')}
+        />
+
+        {/* Port Section */}
+        <IronOreProcessNode
+          x={730} y={50}
+          width={100} height={55}
+          title="Car Dumper"
+          subtitle="8,000 t/h"
+          status="ok"
+          isHighlighted={isHighlighted('cardumper')}
+          onClick={() => onNodeClick?.('cardumper')}
+        />
+        
+        <IronOreProcessNode
+          x={730} y={120}
+          width={100} height={55}
+          title="Port Stock"
+          subtitle="2.4Mt"
+          status="ok"
+          isHighlighted={isHighlighted('portstock')}
+          onClick={() => onNodeClick?.('portstock')}
+        />
+        
+        <IronOreProcessNode
+          x={730} y={190}
+          width={100} height={55}
+          title="Shiploader"
+          subtitle="10,000 t/h"
+          status="ok"
+          isHighlighted={isHighlighted('shiploader')}
+          onClick={() => onNodeClick?.('shiploader')}
+        />
+        
+        <IronOreProcessNode
+          x={870} y={60}
+          width={100} height={55}
+          title="Berth 1"
+          subtitle="Loading"
+          status="active"
+          isHighlighted={isHighlighted('berth1')}
+          onClick={() => onNodeClick?.('berth1')}
+        />
+        
+        <IronOreProcessNode
+          x={870} y={130}
+          width={100} height={55}
+          title="Berth 2"
+          subtitle="Available"
+          status="ok"
+          isHighlighted={isHighlighted('berth2')}
+          onClick={() => onNodeClick?.('berth2')}
+        />
+        
+        <IronOreProcessNode
+          x={990} y={95}
+          width={90} height={55}
+          title="Vessel"
+          subtitle="MV Coral Bay"
+          status="warning"
+          isHighlighted={isHighlighted('vessel')}
+          onClick={() => onNodeClick?.('vessel')}
+        />
+
+        {/* Flow Arrows */}
+        {/* Mining to Crusher */}
+        <IronOreFlowArrow d="M 105 77 L 115 77 L 115 120 L 115 120" />
+        <IronOreFlowArrow d="M 105 142 L 115 142 L 115 130" />
+        <IronOreFlowArrow d="M 105 207 L 115 207 L 115 145" />
+        
+        {/* Crusher to Stockpiles */}
+        <IronOreFlowArrow d="M 195 130 L 230 95" />
+        <IronOreFlowArrow d="M 195 130 L 230 175" />
+        
+        {/* Stockpiles to Reclaimer */}
+        <IronOreFlowArrow d="M 330 95 L 355 125" />
+        <IronOreFlowArrow d="M 330 175 L 355 135" />
+        
+        {/* Reclaimer to Train Load */}
+        <IronOreFlowArrow d="M 455 130 L 520 95" animated />
+        
+        {/* Train Load to Rail */}
+        <IronOreFlowArrow d="M 610 95 L 620 125" />
+        <IronOreFlowArrow d="M 565 150 L 565 175 L 620 140" />
+        
+        {/* Rail to Port */}
+        <IronOreFlowArrow d="M 690 130 L 730 80" />
+        
+        {/* Port Internal */}
+        <IronOreFlowArrow d="M 780 105 L 780 120" />
+        <IronOreFlowArrow d="M 780 175 L 780 190" />
+        <IronOreFlowArrow d="M 830 147 L 870 90" />
+        <IronOreFlowArrow d="M 830 220 L 870 165" animated />
+        
+        {/* To Vessel */}
+        <IronOreFlowArrow d="M 970 90 L 990 115" />
+        <IronOreFlowArrow d="M 970 155 L 990 130" />
+      </svg>
+    </div>
+  );
+};
+
+// Iron Ore KPI Header Component
+const IronOreKPIHeader = ({ kpis }) => {
+  const formatNumber = (num) => num.toLocaleString('en-US');
+  
+  return (
+    <div style={{ 
+      display: 'flex', 
+      gap: '12px', 
+      padding: '16px',
+      background: 'white',
+      borderBottom: '1px solid #e2e8f0',
+      flexWrap: 'wrap'
+    }}>
+      <KPICard
+        icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>}
+        label="Fe Grade (Blend)"
+        value={kpis.feGrade}
+        unit="%"
+        change={kpis.feGrade >= 62 ? 'On Spec' : '0.8% below'}
+        isUp={kpis.feGrade >= 62}
+        isAlert={kpis.feGrade < 62}
+      />
+      <KPICard
+        icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>}
+        label="Daily Throughput"
+        value={formatNumber(kpis.throughput)}
+        unit="t/day"
+        change="2.3%"
+        isUp={true}
+      />
+      <KPICard
+        icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>}
+        label="Trains Today"
+        value={kpis.trainsToday}
+        unit="/ 8 planned"
+        change={kpis.trainsToday >= 6 ? 'On Track' : '1 behind'}
+        isUp={kpis.trainsToday >= 6}
+        isAlert={kpis.trainsToday < 6}
+      />
+      <KPICard
+        icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>}
+        label="Vessel Loading"
+        value="MV Coral Bay"
+        unit=""
+        change="ETA 22:00"
+        isUp={true}
+      />
+      <KPICard
+        icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+        label="Grade Risk"
+        value="Train-07"
+        unit=""
+        change="61.2% Fe"
+        isUp={false}
+        isAlert={true}
+      />
+    </div>
+  );
+};
+
 // Toggle Button Component
 const ToggleButton = ({ label, isActive, onClick }) => (
   <button
@@ -516,38 +900,60 @@ const ImageDigitalTwin = ({ onEquipmentClick, highlightedIds = [], highlightColo
   );
 };
 
-// Main diagram component
+// Main diagram component - uses same digital twin diagram with mode-specific KPIs
 const MiningProcessFlowDiagram = ({ 
   onEquipmentClick,
   highlightedIds = ['rom-bin-primary-crusher'],
   highlightColor = '#dc2626',
-  useDesignedImage = true  // Default to designed image
+  useDesignedImage = true,  // Default to designed image
+  mode = 'maintenance'  // 'maintenance' = copper KPIs, 'waioShiftOptimiser' = iron ore KPIs
 }) => {
   const [activeView, setActiveView] = useState('shift');  // Default to Shift Performance
   const [viewMode, setViewMode] = useState('designed');  // Default to designed view
   
-  // Dynamic KPIs - aligned with scenario (250 t/h production loss = 6,000 t/day)
-  // Large-scale copper mine: 145,000 ROM → 125,000 processed → 625 Cu produced
-  const [kpis, setKpis] = useState({
+  // Check if in WAIO (Iron Ore) mode
+  const isWAIOMode = mode === 'waioShiftOptimiser';
+  
+  // Iron Ore KPIs for WAIO mode
+  const [ironOreKpis, setIronOreKpis] = useState({
+    feGrade: 61.2,          // Current blend grade %
+    throughput: 485000,     // Daily throughput tonnes
+    trainsToday: 5,         // Trains dispatched
+    portStock: 2.4,         // Port stockpile Mt
+  });
+  
+  // Copper KPIs for Maintenance mode
+  const [copperKpis, setCopperKpis] = useState({
     rom: 145280,           // Run of Mine tonnes/day
     oreProcessed: 124850,  // After crusher/mill processing
     copperProduced: 624,   // Copper concentrate tonnes/day  
     productionLoss: 6125   // 250 t/h × 24.5h effective = ~6,125 t/day
   });
 
-  // Simulate live data fluctuations (subtle ±0.1-0.3%)
+  // Simulate live data fluctuations based on mode
   useEffect(() => {
     const interval = setInterval(() => {
-      setKpis(prev => ({
-        rom: Math.round(prev.rom + (Math.random() - 0.5) * 200),
-        oreProcessed: Math.round(prev.oreProcessed + (Math.random() - 0.5) * 150),
-        copperProduced: Math.round((prev.copperProduced + (Math.random() - 0.5) * 2) * 10) / 10,
-        productionLoss: Math.round(prev.productionLoss + (Math.random() - 0.5) * 50)
-      }));
+      if (isWAIOMode) {
+        // Iron ore KPI fluctuations
+        setIronOreKpis(prev => ({
+          feGrade: Math.round((prev.feGrade + (Math.random() - 0.5) * 0.1) * 10) / 10,
+          throughput: Math.round(prev.throughput + (Math.random() - 0.5) * 2000),
+          trainsToday: prev.trainsToday, // Don't fluctuate discrete count
+          portStock: Math.round((prev.portStock + (Math.random() - 0.5) * 0.01) * 100) / 100,
+        }));
+      } else {
+        // Copper KPI fluctuations
+        setCopperKpis(prev => ({
+          rom: Math.round(prev.rom + (Math.random() - 0.5) * 200),
+          oreProcessed: Math.round(prev.oreProcessed + (Math.random() - 0.5) * 150),
+          copperProduced: Math.round((prev.copperProduced + (Math.random() - 0.5) * 2) * 10) / 10,
+          productionLoss: Math.round(prev.productionLoss + (Math.random() - 0.5) * 50)
+        }));
+      }
     }, 3000); // Update every 3 seconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isWAIOMode]);
 
   // Format numbers with commas
   const formatNumber = (num) => {
@@ -568,6 +974,7 @@ const MiningProcessFlowDiagram = ({
     }
   };
 
+  // Same digital twin diagram for both modes, with mode-specific KPI header
   return (
     <div style={{ 
       display: 'flex', 
@@ -577,49 +984,55 @@ const MiningProcessFlowDiagram = ({
       borderRadius: '8px',
       overflow: 'hidden'
     }}>
-      {/* KPI Header */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '16px', 
-        padding: '16px',
-        background: 'white',
-        borderBottom: '1px solid #e2e8f0',
-        flexWrap: 'wrap'
-      }}>
-        <KPICard
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>}
-          label="Run of Mine (ROM)"
-          value={formatNumber(kpis.rom)}
-          unit="t/day"
-          change="2.1%"
-          isUp={true}
-        />
-        <KPICard
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>}
-          label="Ore Processed"
-          value={formatNumber(kpis.oreProcessed)}
-          unit="t/day"
-          change="4.8%"
-          isUp={false}
-        />
-        <KPICard
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>}
-          label="Copper Produced"
-          value={formatNumber(kpis.copperProduced)}
-          unit="t/day"
-          change="4.8%"
-          isUp={false}
-        />
-        <KPICard
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
-          label="Est. Production Loss"
-          value={formatNumber(kpis.productionLoss)}
-          unit="t/day"
-          change="≈250 t/h"
-          isUp={true}
-          isAlert={true}
-        />
-      </div>
+      {/* Mode-specific KPI Header */}
+      {isWAIOMode ? (
+        // Iron Ore KPIs for Pit-to-Port mode
+        <IronOreKPIHeader kpis={ironOreKpis} />
+      ) : (
+        // Copper KPIs for Maintenance mode
+        <div style={{ 
+          display: 'flex', 
+          gap: '16px', 
+          padding: '16px',
+          background: 'white',
+          borderBottom: '1px solid #e2e8f0',
+          flexWrap: 'wrap'
+        }}>
+          <KPICard
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>}
+            label="Run of Mine (ROM)"
+            value={formatNumber(copperKpis.rom)}
+            unit="t/day"
+            change="2.1%"
+            isUp={true}
+          />
+          <KPICard
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>}
+            label="Ore Processed"
+            value={formatNumber(copperKpis.oreProcessed)}
+            unit="t/day"
+            change="4.8%"
+            isUp={false}
+          />
+          <KPICard
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>}
+            label="Copper Produced"
+            value={formatNumber(copperKpis.copperProduced)}
+            unit="t/day"
+            change="4.8%"
+            isUp={false}
+          />
+          <KPICard
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+            label="Est. Production Loss"
+            value={formatNumber(copperKpis.productionLoss)}
+            unit="t/day"
+            change="≈250 t/h"
+            isUp={true}
+            isAlert={true}
+          />
+        </div>
+      )}
 
       {/* Toggle Buttons */}
       <div style={{ 

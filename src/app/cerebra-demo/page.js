@@ -15,9 +15,12 @@ import { useDynamicAgents } from "./hooks/useDynamicAgents";
 // WAIO imports
 import { DOMAIN_MODES, DOMAIN_MODE_IDS, DEFAULT_DOMAIN_MODE } from "./domains/domainModes";
 import { waioNotifications } from "./data/waio/waioNotifications";
-import { waioWorkflowQuestions, waioStageConfig, waioObjectiveWeights } from "./data/waio/waioWorkflowQuestions";
+import { waioWorkflowQuestions, waioStageConfig, waioObjectiveWeights, getRandomScenarioVariant, getCurrentScenarioVariant, setScenarioVariantById } from "./data/waio/waioWorkflowQuestions";
 import { waioShift } from "./data/waio/waioScenarioContext";
 import { WAIOKPIStrip } from "./components/waio";
+
+// Graph modal
+import P2COntologyGraphModal from "./components/visualizations/P2COntologyGraphModal";
 
 // Scene states
 const SCENES = {
@@ -47,6 +50,22 @@ export default function CerebraDemo() {
   // Output console state
   const [outputStage, setOutputStage] = useState(null);
   const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
+  const [isProcessingStage, setIsProcessingStage] = useState(false);
+  
+  // Helper to set output stage with processing delay (simulates AI inference)
+  const setOutputStageWithDelay = useCallback((stage, delay = 800) => {
+    setIsProcessingStage(true);
+    setOutputStage(null); // Clear current stage
+    setTimeout(() => {
+      setOutputStage(stage);
+      setIsProcessingStage(false);
+    }, delay + Math.random() * 400); // Add slight randomness for realism
+  }, []);
+  
+  // P2C Ontology Graph modal state
+  const [showP2CGraph, setShowP2CGraph] = useState(false);
+  const [graphFocusId, setGraphFocusId] = useState(null);
+  const [graphMode, setGraphMode] = useState('instance');
   
   // Chatbot response state - displayed in Output Console
   const [chatResponse, setChatResponse] = useState(null);
@@ -81,6 +100,12 @@ export default function CerebraDemo() {
     
     setDomainMode(newMode);
     
+    // Randomize scenario variant when entering WAIO mode for varied demo experience
+    if (newMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER) {
+      const variant = getRandomScenarioVariant();
+      console.log('WAIO Scenario Rotated:', variant.name, variant.trainId);
+    }
+    
     // Reset all conversation and workflow state
     setCurrentQuestionId(newMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER ? 'waio_q1' : 'q1');
     setAnsweredQuestions([]);
@@ -90,9 +115,23 @@ export default function CerebraDemo() {
     setSelectedPlan(null);
     setOutputStage(null);
     setShowKnowledgeGraph(false);
+    setShowP2CGraph(false);
     setChatResponse(null);
     resetAgents();
   }, [domainMode, resetAgents]);
+  
+  // Handle opening P2C graph modal
+  const handleOpenGraph = useCallback(({ focusId = null, mode = 'instance' } = {}) => {
+    setGraphFocusId(focusId);
+    setGraphMode(mode);
+    setShowP2CGraph(true);
+  }, []);
+  
+  // Handle closing P2C graph modal  
+  const handleCloseGraph = useCallback(() => {
+    setShowP2CGraph(false);
+    setGraphFocusId(null);
+  }, []);
 
   // Get current question object
   const getCurrentQuestion = () => {
@@ -172,11 +211,33 @@ export default function CerebraDemo() {
 
   // Handle notification click
   const handleNotificationClick = useCallback((notification) => {
+    // For WAIO mode, clicking a notification with a scenarioVariantId starts that scenario
+    if (domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER && notification.scenarioVariantId) {
+      // Set the scenario variant based on the notification
+      const variant = setScenarioVariantById(notification.scenarioVariantId);
+      console.log('Notification clicked - Setting scenario:', variant.name, variant.trainId);
+      
+      // Close notifications panel
+      setShowNotifications(false);
+      
+      // Navigate to analysis scene and reset workflow to Q1
+      setCurrentScene(SCENES.ANALYSIS);
+      setCurrentQuestionId('waio_q1');
+      setAnsweredQuestions([]);
+      setSelectedScenario(null);
+      setOutputStage(null);
+      setSelectedObjective(null);
+      setSelectedPlan(null);
+      setChatResponse(null);
+      return;
+    }
+    
+    // For maintenance mode or non-actionable notifications
     if (notification.severity === "critical") {
       setShowNotifications(false);
       handleEquipmentClick('primary_crusher');
     }
-  }, [handleEquipmentClick]);
+  }, [domainMode, handleEquipmentClick]);
 
   // Handle answer in conversation panel
   const handleAnswer = useCallback((questionId, optionId) => {
@@ -199,14 +260,14 @@ export default function CerebraDemo() {
         case 'waio_q1':
           if (optionId === 'yes') {
             setCurrentQuestionId('waio_q2');
-            setOutputStage('waio_agent_network');
+            setOutputStageWithDelay('waio_agent_network', 600);
           }
           break;
           
         case 'waio_q2':
           if (optionId === 'yes') {
             setIsConversationLocked(true);
-            setOutputStage('waio_deviation_trace');
+            setOutputStageWithDelay('waio_deviation_trace', 800);
           } else {
             setCurrentQuestionId('waio_q3');
           }
@@ -223,7 +284,7 @@ export default function CerebraDemo() {
         case 'waio_q4':
           if (optionId === 'yes') {
             setIsConversationLocked(true);
-            setOutputStage('waio_parallel_huddle');
+            setOutputStageWithDelay('waio_parallel_huddle', 1000);
           }
           break;
           
@@ -231,22 +292,52 @@ export default function CerebraDemo() {
           // User selected a plan option
           setSelectedPlan(optionId === 'plan_a' ? 'PLAN-A' : optionId === 'plan_b' ? 'PLAN-B' : 'PLAN-C');
           setCurrentQuestionId('waio_q6');
-          setOutputStage('waio_shift_plan');
+          setOutputStageWithDelay('waio_shift_plan', 700);
           break;
           
         case 'waio_q6':
           if (optionId === 'yes') {
             setIsConversationLocked(true);
-            setOutputStage('waio_publish');
+            setOutputStageWithDelay('waio_publish', 800);
           } else {
             setCurrentQuestionId('waio_q5');
-            setOutputStage('waio_plan_options');
+            setOutputStageWithDelay('waio_plan_options', 500);
           }
           break;
           
         case 'waio_q7':
           if (optionId === 'yes') {
-            setOutputStage('waio_monitor');
+            setOutputStageWithDelay('waio_monitor', 600);
+          }
+          // Q7 now transitions to Q8 (closed-loop) regardless of answer
+          setCurrentQuestionId('waio_q8');
+          break;
+          
+        // ============================================================================
+        // CLOSED-LOOP MINE PLANNING HANDLERS (Q8-Q10)
+        // ============================================================================
+          
+        case 'waio_q8':
+          if (optionId === 'yes') {
+            setIsConversationLocked(true);
+            setOutputStageWithDelay('waio_reconciliation', 900);
+          }
+          break;
+          
+        case 'waio_q9':
+          if (optionId === 'yes') {
+            setIsConversationLocked(true);
+            setOutputStageWithDelay('waio_mine_plan_retrofit', 1000);
+          }
+          break;
+          
+        case 'waio_q10':
+          if (optionId === 'yes') {
+            setIsConversationLocked(true);
+            setOutputStageWithDelay('waio_publish_to_systems', 800);
+          } else {
+            // User chose not to publish - still advance to complete
+            setCurrentQuestionId('waio_complete');
           }
           break;
       }
@@ -336,7 +427,29 @@ export default function CerebraDemo() {
           break;
           
         case 'waio_monitor':
-          // Final stage - demo complete
+          // Monitor stage complete - continue to Q8 (reconciliation)
+          setIsConversationLocked(false);
+          setCurrentQuestionId('waio_q8');
+          break;
+          
+        // ============================================================================
+        // CLOSED-LOOP MINE PLANNING STAGE HANDLERS
+        // ============================================================================
+          
+        case 'waio_reconciliation':
+          setIsConversationLocked(false);
+          setCurrentQuestionId('waio_q9');
+          break;
+          
+        case 'waio_mine_plan_retrofit':
+          setIsConversationLocked(false);
+          setCurrentQuestionId('waio_q10');
+          break;
+          
+        case 'waio_publish_to_systems':
+          // Final stage - transition to complete state
+          setIsConversationLocked(false);
+          setCurrentQuestionId('waio_complete');
           break;
       }
       return;
@@ -403,6 +516,12 @@ export default function CerebraDemo() {
             title={activeDomain.headerTitle}
             onNotificationClick={() => setShowNotifications(!showNotifications)}
             notificationCount={getActiveNotifications().filter((n) => n.severity === "critical").length}
+            showGraphButton={false} // Only show Ontology in assistant area, not digital twin
+            onGraphClick={() => handleOpenGraph()}
+            // Domain mode props
+            domainMode={domainMode}
+            domainModes={Object.values(DOMAIN_MODES)}
+            onDomainModeChange={handleDomainModeSwitch}
           />
           <main style={{ 
             flex: 1, 
@@ -412,44 +531,9 @@ export default function CerebraDemo() {
             display: 'flex',
             flexDirection: 'column',
           }}>
-            {/* Domain Mode Toggle */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              marginBottom: '16px',
-            }}>
-              <div style={{
-                display: 'inline-flex',
-                background: 'white',
-                borderRadius: '8px',
-                padding: '4px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              }}>
-                {Object.values(DOMAIN_MODES).map(mode => (
-                  <button
-                    key={mode.id}
-                    onClick={() => handleDomainModeSwitch(mode.id)}
-                    style={{
-                      padding: '10px 20px',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '13px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      background: domainMode === mode.id ? '#A100FF' : 'transparent',
-                      color: domainMode === mode.id ? 'white' : '#6B7280',
-                    }}
-                  >
-                    {mode.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            {/* WAIO KPI Strip (only in WAIO mode) */}
+            {/* WAIO KPI Strip (only in WAIO mode) - Compact version */}
             {domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER && (
-              <WAIOKPIStrip kpis={waioShift.kpis} />
+              <WAIOKPIStrip kpis={waioShift.kpis} compact={true} />
             )}
             
             {/* DIGITAL TWIN - Mining Process Flow SVG Diagram */}
@@ -476,6 +560,8 @@ export default function CerebraDemo() {
             title={activeDomain.analysisTitle}
             showBackButton
             onBack={() => setCurrentScene(SCENES.OVERVIEW)}
+            showGraphButton={domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER}
+            onGraphClick={() => handleOpenGraph()}
           />
           <main className="cerebra-main" style={{
             flex: 1,
@@ -540,6 +626,11 @@ export default function CerebraDemo() {
                 selectedObjective={selectedObjective}
                 selectedPlan={selectedPlan}
                 onSelectPlan={setSelectedPlan}
+                // Processing state
+                isProcessingStage={isProcessingStage}
+                // Graph and publish handlers
+                onOpenGraph={handleOpenGraph}
+                onPublish={() => setOutputStageWithDelay('waio_publish_to_systems', 800)}
               />
             </div>
           </main>
@@ -572,6 +663,16 @@ export default function CerebraDemo() {
             </div>
           </footer>
         </>
+      )}
+      
+      {/* P2C Ontology Graph Modal - Always available in WAIO mode */}
+      {domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER && (
+        <P2COntologyGraphModal
+          isOpen={showP2CGraph}
+          onClose={handleCloseGraph}
+          initialFocusId={graphFocusId}
+          mode={graphMode}
+        />
       )}
     </div>
   );

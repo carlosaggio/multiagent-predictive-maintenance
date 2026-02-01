@@ -798,5 +798,82 @@ By following this strategy, the demo can be progressively enhanced to show end-t
 
 ---
 
-*Document created: January 2025*  
-*For: Cerebra Demo Extension Planning*
+## 10. WAIO Closed-Loop Mine Planning Implementation (January 2026)
+
+### 10.1 Overview
+
+The WAIO (West Australia Iron Ore) Pit-to-Port Shift Optimiser has been enhanced with a **closed-loop mine planning capability** that demonstrates how AI-driven decisions feed back into longer-term planning cycles.
+
+**Key Concept:** *"AI doesn't just replan this shift — it prevents the same deviation tomorrow."*
+
+### 10.2 What Was Implemented
+
+| Feature | Description | Files |
+|---------|-------------|-------|
+| **P2C Ontology Graph** | Foundry-style semantic model with 30+ entity types, 40+ relationship types | `data/waio/ontology/*` |
+| **Instance Graph** | 50+ nodes and 80+ edges representing the WAIO value chain | `p2cInstanceGraph.js` |
+| **Lineage Graph** | System-to-system data flow visualization | `p2cLineageGraph.js` |
+| **Decision Graph** | Agent execution traces for explainability | `p2cDecisionGraph.js` |
+| **Graph Modal** | 4-tab modal (Ontology, Instance, Lineage, Decision) with search and highlighting | `P2COntologyGraphModal.js` |
+| **Reconciliation Stage** | Plan vs actual analysis with deviation heatmap | `WAIOReconciliationStage.js` |
+| **Mine Plan Retrofit Stage** | 7/30/90-day plan stack visualization with proposed changes | `WAIOMinePlanRetrofitStage.js` |
+| **Publish to Systems Stage** | Simulated publishing to Deswik, Vulcan, Dispatch, SCADA, LIMS | `WAIOPublishToSystemsStage.js` |
+| **Integration Publish Drawer** | Publishing progress theatre component | `IntegrationPublishDrawer.js` |
+| **New Agents** | Plan Retrofit (PR) and Ontology Navigator (OG) agents | `waioAgents.js` |
+| **Extended Workflow** | Q8 (Reconciliation), Q9 (Retrofit), Q10 (Publish) | `waioWorkflowQuestions.js` |
+
+### 10.3 Demo Flow (Q1-Q10)
+
+```
+Q1: Risk Detection          → Q2: Trace Deviation
+       ↓                            ↓
+Q3: Objective Selection    → Q4: Parallel Huddle
+       ↓                            ↓
+Q5: Plan Options           → Q6: Publish Shift Plan
+       ↓                            ↓
+Q7: Enable Monitoring      → Q8: End-of-Shift Reconciliation
+       ↓                            ↓
+Q9: Retrofit 7/30/90 Day Plans → Q10: Publish to Planning Systems
+                                        ↓
+                              ✅ Closed-Loop Complete
+```
+
+### 10.4 Key Integration Points Simulated
+
+| System | Purpose | Payload |
+|--------|---------|---------|
+| **Deswik** | Mine scheduling | 7-Day schedule XML, Block reassignments |
+| **Vulcan** | Block model | Grade adjustment factors, Variance flags |
+| **Minestar/Jigsaw** | Dispatch | Truck assignments, Dig face priorities |
+| **SCADA (OSIsoft/Aveva)** | Process control | Setpoint recommendations, Blend targets |
+| **LIMS** | Laboratory | Sample priorities, Re-assay requests |
+| **Snowden/MTM** | Reconciliation | Deviation tags, Compliance records |
+
+### 10.5 Ontology Model
+
+The P2C ontology captures the full value chain:
+
+- **Planning**: Plan, PlanVersion, PlanElement
+- **Mining**: Pit, Zone, Block, Dig, Blast
+- **Processing**: Stockpile, Blend, GradeEstimate
+- **Logistics**: Train, Berth, Vessel, Parcel
+- **Quality**: Assay, GradeSpec, Penalty
+- **Commercial**: Contract, Customer, Shipment
+- **Systems**: System, DataProduct, APIEndpoint
+- **AI/Agents**: Agent, Recommendation, RiskSignal
+
+### 10.6 Testing
+
+- **Static validation script**: `scripts/test-closed-loop.mjs`
+- **38 automated tests** covering all phases
+- **Regression protection** for Maintenance mode
+
+### 10.7 Documentation
+
+- **Task Graph**: `docs/cerebra-analysis/IMPLEMENTATION_TASK_GRAPH.md`
+- **Spec**: `WAIO_P2C_ClosedLoop_MinePlanning_Ontology_Enhancement.md`
+
+---
+
+*Document updated: January 2026*  
+*WAIO Closed-Loop Implementation Complete*

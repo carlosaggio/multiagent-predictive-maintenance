@@ -2,6 +2,7 @@
  * WAIO Notifications
  * 
  * Alert notifications for the WAIO Pit-to-Port demo.
+ * Each critical/actionable notification maps to a specific scenario variant.
  */
 
 export const waioNotifications = [
@@ -16,9 +17,53 @@ export const waioNotifications = [
     entity: 'TRAIN-07',
     actionRequired: true,
     read: false,
+    // Maps to scenario variant_a (Train-07 grade under-spec)
+    scenarioVariantId: 'variant_a',
   },
   {
     id: 'WAIO-NOTIF-002',
+    type: 'silica_risk',
+    severity: 'critical',
+    title: 'Train-04: Silica contamination risk',
+    message: 'SiO2 forecast 4.8% vs spec ≤4.5% — 71% probability of exceeding limit',
+    timestamp: '2025-01-15T10:10:00+08:00',
+    source: 'Grade & Compliance Agent',
+    entity: 'TRAIN-04',
+    actionRequired: true,
+    read: false,
+    // Maps to scenario variant_b (Train-04 silica over-spec)
+    scenarioVariantId: 'variant_b',
+  },
+  {
+    id: 'WAIO-NOTIF-003',
+    type: 'throughput_risk',
+    severity: 'critical',
+    title: 'Train-09: Throughput shortfall',
+    message: 'Loading rate 5,800 t/h vs target 6,500 t/h — may miss loading window',
+    timestamp: '2025-01-15T10:05:00+08:00',
+    source: 'Logistics Agent',
+    entity: 'TRAIN-09',
+    actionRequired: true,
+    read: false,
+    // Maps to scenario variant_c (Train-09 throughput shortfall)
+    scenarioVariantId: 'variant_c',
+  },
+  {
+    id: 'WAIO-NOTIF-004',
+    type: 'multiple_risk',
+    severity: 'critical',
+    title: 'Train-02: Multiple constraints',
+    message: 'Fe forecast 61.5% + truck allocation gap at Pit2 — 74% combined deviation risk',
+    timestamp: '2025-01-15T10:00:00+08:00',
+    source: 'Shift Optimiser',
+    entity: 'TRAIN-02',
+    actionRequired: true,
+    read: false,
+    // Maps to scenario variant_d (Train-02 multiple constraints)
+    scenarioVariantId: 'variant_d',
+  },
+  {
+    id: 'WAIO-NOTIF-005',
     type: 'data_quality',
     severity: 'warning',
     title: 'Stockpile SP-3: Data confidence degraded',
@@ -28,9 +73,10 @@ export const waioNotifications = [
     entity: 'SP-3',
     actionRequired: true,
     read: false,
+    scenarioVariantId: null, // Info only, doesn't trigger specific scenario
   },
   {
-    id: 'WAIO-NOTIF-003',
+    id: 'WAIO-NOTIF-006',
     type: 'grade_drift',
     severity: 'warning',
     title: 'Pit 3 Zone B: Ore type drift detected',
@@ -40,33 +86,10 @@ export const waioNotifications = [
     entity: 'PIT3-ZB-041',
     actionRequired: true,
     read: false,
+    scenarioVariantId: null,
   },
   {
-    id: 'WAIO-NOTIF-004',
-    type: 'equipment_breakdown',
-    severity: 'critical',
-    title: 'Truck TRK-12: Breakdown',
-    message: 'Transmission fault detected; estimated repair 2h; haul capacity reduced 8%',
-    timestamp: '2025-01-15T10:30:00+08:00',
-    source: 'Fleet & Resources Agent',
-    entity: 'TRK-12',
-    actionRequired: true,
-    read: false,
-  },
-  {
-    id: 'WAIO-NOTIF-005',
-    type: 'logistics_risk',
-    severity: 'warning',
-    title: 'Rail: Slot compression risk',
-    message: 'Train-07 delay >45min will impact Berth B2 schedule and increase demurrage risk',
-    timestamp: '2025-01-15T10:20:00+08:00',
-    source: 'Logistics Agent',
-    entity: 'TRAIN-07',
-    actionRequired: false,
-    read: false,
-  },
-  {
-    id: 'WAIO-NOTIF-006',
+    id: 'WAIO-NOTIF-007',
     type: 'port_risk',
     severity: 'info',
     title: 'Port: MV-Koyo-Maru arrival update',
@@ -76,18 +99,7 @@ export const waioNotifications = [
     entity: 'MV-Koyo-Maru',
     actionRequired: false,
     read: true,
-  },
-  {
-    id: 'WAIO-NOTIF-007',
-    type: 'plan_compliance',
-    severity: 'warning',
-    title: 'Plan compliance: Below target',
-    message: 'Shift plan compliance at 84% (target 95%); 3 deviations identified',
-    timestamp: '2025-01-15T10:00:00+08:00',
-    source: 'Shift Optimiser',
-    entity: null,
-    actionRequired: true,
-    read: false,
+    scenarioVariantId: null,
   },
   {
     id: 'WAIO-NOTIF-008',
@@ -100,6 +112,7 @@ export const waioNotifications = [
     entity: 'CNT-KJP-A',
     actionRequired: false,
     read: true,
+    scenarioVariantId: null,
   },
 ];
 

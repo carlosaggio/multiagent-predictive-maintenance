@@ -174,7 +174,47 @@ const formatCurrency = (num) => {
   return num;
 };
 
-export default function WAIOKPIStrip({ kpis }) {
+// Compact KPI Component for space-optimized display
+function CompactKPI({ label, value, status, statusColor }) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      padding: '8px 16px',
+      background: status === 'critical' ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
+      borderRight: '1px solid rgba(226, 232, 240, 0.5)',
+    }}>
+      <div>
+        <div style={{ fontSize: '10px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          {label}
+        </div>
+        <div style={{ 
+          fontSize: '18px', 
+          fontWeight: '700', 
+          color: statusColor || '#1A1A2E',
+          lineHeight: '1.2',
+        }}>
+          {value}
+        </div>
+      </div>
+      {status && (
+        <span style={{
+          fontSize: '9px',
+          fontWeight: '600',
+          padding: '2px 6px',
+          borderRadius: '3px',
+          background: status === 'critical' ? '#FEE2E2' : status === 'warning' ? '#FEF3C7' : '#D1FAE5',
+          color: status === 'critical' ? '#DC2626' : status === 'warning' ? '#D97706' : '#059669',
+        }}>
+          {status === 'critical' ? 'CRITICAL' : status === 'warning' ? 'HIGH' : 'OK'}
+        </span>
+      )}
+    </div>
+  );
+}
+
+export default function WAIOKPIStrip({ kpis, compact = false }) {
   if (!kpis) return null;
 
   const {
@@ -188,6 +228,59 @@ export default function WAIOKPIStrip({ kpis }) {
   const tonneDelta = tonnesLoaded - tonnesTarget;
   const tonnesDeltaPercent = ((tonneDelta / tonnesTarget) * 100).toFixed(1);
 
+  // Compact mode - single row with essential KPIs
+  if (compact) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        background: 'white',
+        borderRadius: '6px',
+        border: '1px solid #E2E8F0',
+        marginBottom: '12px',
+        overflow: 'hidden',
+      }}>
+        <CompactKPI 
+          label="Compliance" 
+          value={formatPercent(planCompliance)}
+          status={planCompliance < 0.85 ? 'warning' : null}
+          statusColor={planCompliance < 0.85 ? '#D97706' : '#1A1A2E'}
+        />
+        <CompactKPI 
+          label="Under-spec Risk" 
+          value={formatPercent(underSpecRisk)}
+          status={underSpecRisk > 0.35 ? 'critical' : underSpecRisk > 0.25 ? 'warning' : null}
+          statusColor={underSpecRisk > 0.35 ? '#DC2626' : underSpecRisk > 0.25 ? '#D97706' : '#1A1A2E'}
+        />
+        <CompactKPI 
+          label="Tonnes" 
+          value={`${formatNumber(tonnesLoaded)}t`}
+          status={tonneDelta < -5000 ? 'warning' : null}
+          statusColor={tonneDelta < 0 ? '#D97706' : '#1A1A2E'}
+        />
+        <CompactKPI 
+          label="Value at Risk" 
+          value={formatCurrency(valueAtRiskUSD)}
+          status={valueAtRiskUSD > 1500000 ? 'critical' : valueAtRiskUSD > 800000 ? 'warning' : null}
+          statusColor={valueAtRiskUSD > 1500000 ? '#DC2626' : valueAtRiskUSD > 800000 ? '#D97706' : '#1A1A2E'}
+        />
+        <div style={{ flex: 1 }} />
+        <div style={{ 
+          padding: '8px 16px', 
+          fontSize: '10px', 
+          color: '#6B7280',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}>
+          <span style={{ width: '6px', height: '6px', background: '#10B981', borderRadius: '50%' }} />
+          Live
+        </div>
+      </div>
+    );
+  }
+
+  // Full mode - original layout
   return (
     <div style={{
       display: 'flex',

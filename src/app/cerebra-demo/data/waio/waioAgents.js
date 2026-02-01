@@ -69,6 +69,24 @@ export const WAIO_AGENT_CONFIG = {
     role: 'Penalties, contract priorities, price signals, value optimisation',
     icon: 'dollar',
   },
+  PR: {
+    id: 'PR',
+    name: 'Plan Retrofit',
+    fullName: 'Plan Retrofit Agent',
+    color: '#0EA5E9', // Sky blue
+    lane: 7,
+    role: 'Generates 7/30/90-day plan adjustments from shift learnings and recurring deviations',
+    icon: 'refresh',
+  },
+  OG: {
+    id: 'OG',
+    name: 'Ontology Navigator',
+    fullName: 'Ontology Navigator Agent',
+    color: '#14B8A6', // Teal
+    lane: 8,
+    role: 'Translates questions into graph queries, provides explainability paths across the P2C ontology',
+    icon: 'graph',
+  },
 };
 
 // Curated agent responses (topline summaries)
@@ -99,6 +117,14 @@ export const WAIO_CURATED_RESPONSES = {
   },
   CM: {
     content: "Customer priority: Contract K-JP-A (Japan Premium) has 1.5x penalty multiplier. Current value-at-risk: $1.8M. Recommend: weight compliance ≥0.30. LME Fe62 at $108.50/dmt (+1.25 24h). Premium shipment window in 48h.",
+    isAI: true,
+  },
+  PR: {
+    content: "Reconciliation complete. Plan compliance 78% vs 85% target. Repeat pattern detected: Pit3 ZoneB uncertainty in 3 of 5 shifts. Generated retrofit changeset with 3 changes for 7D plan. Expected compliance gain: +8%, under-spec risk: -34%. Ready for Deswik/Vulcan publish.",
+    isAI: true,
+  },
+  OG: {
+    content: "Query resolved. Traced risk signal RISK_TRAIN07_UNDERSPEC through grade estimates to root cause: Path shows Risk → GradeEst (61.2% Fe) → Assay#5521 (4h lag) → SP-3 Slice (confidence 0.72). Primary driver: assay latency on Pit3 ZB material. 3 related entities affected.",
     isAI: true,
   },
 };
@@ -274,6 +300,48 @@ export const WAIO_AGENT_TOOLS = {
     name: 'generate_shift_plan',
     description: 'Generate optimised shift plan',
     agent: 'SO',
+  },
+  // Plan Retrofit Agent tools
+  reconcile_plan_vs_actual: {
+    name: 'reconcile_plan_vs_actual',
+    description: 'Reconcile shift plan vs actual execution metrics',
+    agent: 'PR',
+  },
+  identify_repeat_patterns: {
+    name: 'identify_repeat_patterns',
+    description: 'Identify recurring deviation patterns from recent shifts',
+    agent: 'PR',
+  },
+  generate_plan_changeset: {
+    name: 'generate_plan_changeset',
+    description: 'Generate plan change set for 7/30/90-day horizons',
+    agent: 'PR',
+  },
+  publish_changeset: {
+    name: 'publish_changeset',
+    description: 'Publish approved change set to planning systems',
+    agent: 'PR',
+  },
+  // Ontology Navigator Agent tools
+  graph_query: {
+    name: 'graph_query',
+    description: 'Query the P2C ontology graph for entities and relationships',
+    agent: 'OG',
+  },
+  graph_traverse: {
+    name: 'graph_traverse',
+    description: 'Traverse graph from a starting node following relationships',
+    agent: 'OG',
+  },
+  explain_entity: {
+    name: 'explain_entity',
+    description: 'Get detailed explanation of an entity with relationships',
+    agent: 'OG',
+  },
+  highlight_path: {
+    name: 'highlight_path',
+    description: 'Highlight a specific path in the ontology graph',
+    agent: 'OG',
   },
 };
 

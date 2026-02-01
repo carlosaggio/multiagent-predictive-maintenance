@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 
 // Accenture Logo Component - uses official SVG from /public/img/
@@ -20,7 +20,15 @@ export default function CerebraHeader({
   onBack,
   onNotificationClick,
   notificationCount = 0,
+  onGraphClick,
+  showGraphButton = false,
+  // Domain mode props
+  domainMode = null,
+  domainModes = [],
+  onDomainModeChange = null,
 }) {
+  const [showDomainMenu, setShowDomainMenu] = useState(false);
+  const activeDomain = domainModes.find(m => m.id === domainMode);
   return (
     <header className="cerebra-header">
       <div className="cerebra-header-left">
@@ -74,6 +82,139 @@ export default function CerebraHeader({
           >
             Back
           </button>
+        )}
+
+        {/* Ontology Button - P2C Knowledge Graph */}
+        {showGraphButton && onGraphClick && (
+          <button
+            onClick={onGraphClick}
+            title="View P2C Ontology"
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '6px',
+              padding: '8px 12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: '500',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(161,0,255,0.3)';
+              e.currentTarget.style.borderColor = '#A100FF';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="18" cy="5" r="3"/>
+              <circle cx="6" cy="12" r="3"/>
+              <circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+            Ontology
+          </button>
+        )}
+
+        {/* Domain Mode Dropdown */}
+        {domainModes.length > 0 && onDomainModeChange && (
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowDomainMenu(!showDomainMenu)}
+              onBlur={() => setTimeout(() => setShowDomainMenu(false), 150)}
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: 'white',
+                fontSize: '12px',
+                fontWeight: '500',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="7" height="7" rx="1"/>
+              </svg>
+              {activeDomain?.label || 'Select Mode'}
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '2px' }}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            {showDomainMenu && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: '4px',
+                background: '#1a1a2e',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '8px',
+                padding: '4px',
+                minWidth: '160px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                zIndex: 100,
+              }}>
+                {domainModes.map(mode => (
+                  <button
+                    key={mode.id}
+                    onClick={() => {
+                      onDomainModeChange(mode.id);
+                      setShowDomainMenu(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: 'none',
+                      borderRadius: '4px',
+                      background: domainMode === mode.id ? 'rgba(161,0,255,0.2)' : 'transparent',
+                      color: domainMode === mode.id ? '#A100FF' : 'rgba(255,255,255,0.8)',
+                      fontSize: '12px',
+                      fontWeight: domainMode === mode.id ? '600' : '400',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (domainMode !== mode.id) {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (domainMode !== mode.id) {
+                        e.currentTarget.style.background = 'transparent';
+                      }
+                    }}
+                  >
+                    {domainMode === mode.id && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="#A100FF" stroke="none">
+                        <circle cx="12" cy="12" r="5"/>
+                      </svg>
+                    )}
+                    {domainMode !== mode.id && <div style={{ width: '12px' }} />}
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Notification Bell */}
