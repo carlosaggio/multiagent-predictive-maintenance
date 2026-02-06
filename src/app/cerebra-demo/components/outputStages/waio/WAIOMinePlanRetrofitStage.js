@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { waioPlanStack, waioRetrofitChangeSet } from '../../../data/waio/waioScenarioContext';
+import { LoadingSpinner, progressiveLoaderStyles } from '../../../utils/progressiveLoader';
 
 /**
  * WAIO Mine Plan Retrofit Stage Component
  * 
  * Enhanced version with history, versions, evidence drill-down, and connected ontology graph.
+ * Includes progressive loading for a more dynamic feel.
  */
 
 // Icons
@@ -442,6 +444,51 @@ function ImpactSummaryCard({ impacts }) {
   );
 }
 
+// Retrofit loading indicator
+function RetrofitLoadingIndicator({ step }) {
+  const steps = [
+    'Loading plan hierarchy...',
+    'Analyzing shift learnings...',
+    'Generating change proposals...',
+    'Calculating compliance impact...',
+    'Preparing plan updates...',
+  ];
+  
+  return (
+    <div style={{
+      padding: '40px 20px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '20px',
+    }}>
+      <LoadingSpinner size={32} />
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1A2E', marginBottom: '6px' }}>
+          Preparing Mine Plan Retrofit
+        </div>
+        <div style={{ fontSize: '12px', color: '#6B7280' }}>
+          {steps[step] || steps[0]}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {steps.map((_, idx) => (
+          <div
+            key={idx}
+            style={{
+              width: '32px',
+              height: '4px',
+              borderRadius: '2px',
+              background: idx <= step ? '#A100FF' : '#E2E8F0',
+              transition: 'background 0.3s ease',
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function WAIOMinePlanRetrofitStage({ onComplete, onOpenGraph, onPublish }) {
   const [expandedPlans, setExpandedPlans] = useState(['SHIFT']);
   const [activeTab, setActiveTab] = useState('changeset');
@@ -453,18 +500,38 @@ export default function WAIOMinePlanRetrofitStage({ onComplete, onOpenGraph, onP
 
   const planStack = waioPlanStack;
   const changeSet = waioRetrofitChangeSet;
+  
+  // Progressive loading states
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [showContent, setShowContent] = useState(false);
+  const [showHeader, setShowHeader] = useState(false);
+  const [showTabs, setShowTabs] = useState(false);
+  const [showTabContent, setShowTabContent] = useState(false);
+  const [showFooter, setShowFooter] = useState(false);
 
-  // Trigger completion after animation - only once
+  // Progressive loading sequence
   useEffect(() => {
-    if (hasCompletedRef.current) return;
-    const timer = setTimeout(() => {
-      if (!hasCompletedRef.current) {
-        hasCompletedRef.current = true;
-        onComplete?.();
-      }
-    }, 2500);
-    return () => clearTimeout(timer);
+    const timers = [
+      setTimeout(() => setLoadingStep(1), 400),
+      setTimeout(() => setLoadingStep(2), 800),
+      setTimeout(() => setLoadingStep(3), 1200),
+      setTimeout(() => setLoadingStep(4), 1600),
+      setTimeout(() => { setShowContent(true); setShowHeader(true); }, 2000),
+      setTimeout(() => setShowTabs(true), 2300),
+      setTimeout(() => setShowTabContent(true), 2600),
+      setTimeout(() => setShowFooter(true), 2900),
+    ];
+    
+    return () => timers.forEach(t => clearTimeout(t));
   }, []);
+
+  // Completion trigger
+  useEffect(() => {
+    if (showFooter && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
+      setTimeout(() => onComplete?.(), 500);
+    }
+  }, [showFooter, onComplete]);
 
   const togglePlan = (horizon) => {
     setExpandedPlans(prev => prev.includes(horizon) ? prev.filter(h => h !== horizon) : [...prev, horizon]);
@@ -485,59 +552,88 @@ export default function WAIOMinePlanRetrofitStage({ onComplete, onOpenGraph, onP
 
   return (
     <div style={{ background: 'white', borderRadius: '8px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-      {/* Header */}
-      <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #1A1A2E 0%, #2D2D44 100%)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <div style={{ fontSize: '15px', fontWeight: '700', color: 'white', marginBottom: '4px' }}>Mine Plan Retrofit</div>
-            <div style={{ fontSize: '11px', color: '#9CA3AF' }}>Closing the loop: 7/30/90-day plan adjustments based on shift learnings</div>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={() => setShowSidePanel(showSidePanel === 'history' ? null : 'history')}
-              style={{ padding: '6px 10px', background: showSidePanel === 'history' ? '#A100FF' : 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', color: 'white', fontSize: '10px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              {Icons.history} History
-            </button>
-            <button
-              onClick={() => setShowSidePanel(showSidePanel === 'versions' ? null : 'versions')}
-              style={{ padding: '6px 10px', background: showSidePanel === 'versions' ? '#A100FF' : 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', color: 'white', fontSize: '10px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              {Icons.compare} Compare
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Initial loading state */}
+      {!showContent && (
+        <RetrofitLoadingIndicator step={loadingStep} />
+      )}
+      
+      {/* Main content */}
+      {showContent && (
+        <>
+          {/* Header */}
+          {showHeader && (
+            <div style={{ 
+              padding: '16px 20px', 
+              background: 'linear-gradient(135deg, #1A1A2E 0%, #2D2D44 100%)',
+              animation: 'fadeIn 0.4s ease-out',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: '700', color: 'white', marginBottom: '4px' }}>Mine Plan Retrofit</div>
+                  <div style={{ fontSize: '11px', color: '#9CA3AF' }}>Closing the loop: 7/30/90-day plan adjustments based on shift learnings</div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => setShowSidePanel(showSidePanel === 'history' ? null : 'history')}
+                    style={{ padding: '6px 10px', background: showSidePanel === 'history' ? '#A100FF' : 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', color: 'white', fontSize: '10px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    {Icons.history} History
+                  </button>
+                  <button
+                    onClick={() => setShowSidePanel(showSidePanel === 'versions' ? null : 'versions')}
+                    style={{ padding: '6px 10px', background: showSidePanel === 'versions' ? '#A100FF' : 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', color: 'white', fontSize: '10px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    {Icons.compare} Compare
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
-      {/* Tabs */}
-      <div style={{ padding: '10px 20px', borderBottom: '1px solid #E2E8F0', display: 'flex', gap: '6px', background: '#FAFAFA' }}>
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              padding: '8px 14px',
-              background: activeTab === tab.id ? '#A100FF' : 'transparent',
-              color: activeTab === tab.id ? 'white' : '#6B7280',
-              border: activeTab === tab.id ? 'none' : '1px solid #E2E8F0',
-              borderRadius: '6px',
-              fontSize: '11px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+          {/* Tabs */}
+          {showTabs && (
+            <div style={{ 
+              padding: '10px 20px', 
+              borderBottom: '1px solid #E2E8F0', 
+              display: 'flex', 
+              gap: '6px', 
+              background: '#FAFAFA',
+              animation: 'fadeIn 0.3s ease-out',
+            }}>
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    padding: '8px 14px',
+                    background: activeTab === tab.id ? '#A100FF' : 'transparent',
+                    color: activeTab === tab.id ? 'white' : '#6B7280',
+                    border: activeTab === tab.id ? 'none' : '1px solid #E2E8F0',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
 
-      {/* Main content area */}
-      <div style={{ display: 'grid', gridTemplateColumns: showSidePanel ? '1fr 300px' : '1fr', gap: '0' }}>
-        {/* Tab content */}
-        <div style={{ padding: '16px 20px', borderRight: showSidePanel ? '1px solid #E2E8F0' : 'none' }}>
+          {/* Main content area */}
+          {showTabContent && (
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: showSidePanel ? '1fr 300px' : '1fr', 
+              gap: '0',
+              animation: 'fadeSlideUp 0.4s ease-out',
+            }}>
+              {/* Tab content */}
+              <div style={{ padding: '16px 20px', borderRight: showSidePanel ? '1px solid #E2E8F0' : 'none' }}>
           {activeTab === 'planstack' && (
             <div>
               <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1A2E', marginBottom: '12px' }}>Planning Horizon Ladder</div>
@@ -620,55 +716,69 @@ export default function WAIOMinePlanRetrofitStage({ onComplete, onOpenGraph, onP
           )}
         </div>
 
-        {/* Side panel */}
-        {showSidePanel && (
-          <div style={{ padding: '16px', background: '#FAFAFA' }}>
-            {showSidePanel === 'history' && <HistoryPanel onSelectVersion={(id) => console.log('Selected version:', id)} />}
-            {showSidePanel === 'versions' && <VersionComparisonPanel />}
-          </div>
-        )}
-      </div>
-
-      {/* Publish action */}
-      <div style={{ padding: '16px 20px', background: '#F9FAFB', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: '11px', color: '#6B7280' }}>
-          Ready to publish change set to Deswik/Vulcan and downstream systems?
-        </div>
-        <button
-          onClick={handlePublish}
-          disabled={isPublishing}
-          style={{
-            padding: '10px 20px',
-            background: isPublishing ? '#9CA3AF' : '#A100FF',
-            border: 'none',
-            borderRadius: '6px',
-            color: 'white',
-            fontSize: '12px',
-            fontWeight: '600',
-            cursor: isPublishing ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          {isPublishing ? (
-            <>
-              <div style={{ width: '14px', height: '14px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-              Publishing...
-            </>
-          ) : (
-            <>
-              {Icons.send}
-              Publish Change Set
-            </>
+              {/* Side panel */}
+              {showSidePanel && (
+                <div style={{ padding: '16px', background: '#FAFAFA' }}>
+                  {showSidePanel === 'history' && <HistoryPanel onSelectVersion={(id) => console.log('Selected version:', id)} />}
+                  {showSidePanel === 'versions' && <VersionComparisonPanel />}
+                </div>
+              )}
+            </div>
           )}
-        </button>
-      </div>
+
+          {/* Publish action */}
+          {showFooter && (
+            <div style={{ 
+              padding: '16px 20px', 
+              background: '#F9FAFB', 
+              borderTop: '1px solid #E2E8F0', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              animation: 'fadeIn 0.3s ease-out',
+            }}>
+              <div style={{ fontSize: '11px', color: '#6B7280' }}>
+                Ready to publish change set to Deswik/Vulcan and downstream systems?
+              </div>
+              <button
+                onClick={handlePublish}
+                disabled={isPublishing}
+                style={{
+                  padding: '10px 20px',
+                  background: isPublishing ? '#9CA3AF' : '#A100FF',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: isPublishing ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                {isPublishing ? (
+                  <>
+                    <div style={{ width: '14px', height: '14px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    Publishing...
+                  </>
+                ) : (
+                  <>
+                    {Icons.send}
+                    Publish Change Set
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Evidence Drawer */}
       <EvidenceDrawer isOpen={showEvidence} onClose={() => setShowEvidence(false)} changeId={selectedChangeId} />
       
       <style jsx>{`
+        ${progressiveLoaderStyles}
         @keyframes spin {
           to { transform: rotate(360deg); }
         }

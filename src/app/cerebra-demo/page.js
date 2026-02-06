@@ -650,12 +650,6 @@ export default function CerebraDemo() {
                 <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/>
               </svg>
               <span>Powered by Azure AI Services</span>
-              <span style={{ color: '#4b5563' }}>|</span>
-              <span>Azure OpenAI</span>
-              <span style={{ color: '#4b5563' }}>|</span>
-              <span>Azure Cosmos DB</span>
-              <span style={{ color: '#4b5563' }}>|</span>
-              <span>SAP Integration</span>
             </div>
             <div>
               <span>AIIS Command Center v2.1.0</span>

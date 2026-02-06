@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import GradeTraceSankey from '../../charts/GradeTraceSankey';
 import DeviationWaterfall from '../../charts/DeviationWaterfall';
 import { waioDeviationTrace } from '../../../data/waio/waioScenarioContext';
+import { useSectionLoader, LoadingSpinner, progressiveLoaderStyles } from '../../../utils/progressiveLoader';
 
 // Dynamic import for Nivo HeatMap
 const ResponsiveHeatMap = dynamic(
@@ -397,25 +398,89 @@ const Icons = {
   table: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>,
 };
 
+// Processing step indicator
+function ProcessingStepIndicator({ steps, currentStep }) {
+  return (
+    <div style={{
+      padding: '32px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '20px',
+    }}>
+      <LoadingSpinner size={32} />
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1A2E', marginBottom: '6px' }}>
+          Analyzing Grade Deviation
+        </div>
+        <div style={{ fontSize: '12px', color: '#6B7280' }}>
+          {steps[currentStep]}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+        {steps.map((step, idx) => (
+          <div
+            key={idx}
+            style={{
+              width: '40px',
+              height: '4px',
+              borderRadius: '2px',
+              background: idx <= currentStep ? '#A100FF' : '#E2E8F0',
+              transition: 'background 0.3s ease',
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function WAIODeviationTraceStage({ data, onComplete, onNodeSelect }) {
   const [activeTab, setActiveTab] = useState('heatmap');
   const [selectedNode, setSelectedNode] = useState(null);
   const hasCompletedRef = useRef(false);
 
   const traceData = data || waioDeviationTrace;
+  
+  // Progressive loading states
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [showContent, setShowContent] = useState(false);
+  const [showHeader, setShowHeader] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
+  const [showTabs, setShowTabs] = useState(false);
+  const [showTabContent, setShowTabContent] = useState(false);
+  
+  const loadingSteps = [
+    'Querying value chain data...',
+    'Tracing grade through pit → stockpile → train...',
+    'Identifying deviation sources...',
+    'Calculating confidence scores...',
+    'Generating visualizations...',
+  ];
 
-  // Simulate completion after animation - only call once
+  // Progressive loading sequence
   useEffect(() => {
-    if (hasCompletedRef.current) return;
+    const timers = [
+      setTimeout(() => setLoadingStep(1), 500),
+      setTimeout(() => setLoadingStep(2), 900),
+      setTimeout(() => setLoadingStep(3), 1300),
+      setTimeout(() => setLoadingStep(4), 1700),
+      setTimeout(() => { setShowContent(true); setShowHeader(true); }, 2100),
+      setTimeout(() => setShowBanner(true), 2400),
+      setTimeout(() => setShowTabs(true), 2700),
+      setTimeout(() => setShowTabContent(true), 3000),
+    ];
     
-    const timer = setTimeout(() => {
-      if (!hasCompletedRef.current) {
-        hasCompletedRef.current = true;
-        onComplete?.();
-      }
-    }, 4000);
-    return () => clearTimeout(timer);
+    return () => timers.forEach(t => clearTimeout(t));
   }, []);
+
+  // Completion trigger
+  useEffect(() => {
+    if (showTabContent && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
+      setTimeout(() => onComplete?.(), 800);
+    }
+  }, [showTabContent, onComplete]);
 
   const handleNodeSelect = (nodeId) => {
     setSelectedNode(nodeId);
@@ -429,216 +494,241 @@ export default function WAIODeviationTraceStage({ data, onComplete, onNodeSelect
       border: '1px solid #E2E8F0',
       overflow: 'hidden',
     }}>
-      {/* Header */}
-      <div style={{
-        padding: '16px 20px',
-        background: 'linear-gradient(135deg, #1A1A2E 0%, #2D2D44 100%)',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <div style={{ 
-              fontSize: '15px', 
-              fontWeight: '700', 
-              color: 'white',
-              marginBottom: '4px',
-            }}>
-              End-to-End Deviation Analysis
-            </div>
-            <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
-              Tracing grade drift across pit → stockpile → train → port
-            </div>
-          </div>
-          
-          {/* Quick Stats */}
-          <div style={{ display: 'flex', gap: '8px' }}>
+      {/* Initial loading state */}
+      {!showContent && (
+        <ProcessingStepIndicator steps={loadingSteps} currentStep={loadingStep} />
+      )}
+      
+      {/* Main content */}
+      {showContent && (
+        <>
+          {/* Header */}
+          {showHeader && (
             <div style={{
-              padding: '6px 12px',
-              background: 'rgba(239, 68, 68, 0.2)',
-              borderRadius: '6px',
-              textAlign: 'center',
+              padding: '16px 20px',
+              background: 'linear-gradient(135deg, #1A1A2E 0%, #2D2D44 100%)',
+              animation: 'fadeIn 0.4s ease-out',
             }}>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: '#FCA5A5' }}>
-                -{(traceData.targetGrade - traceData.predictedGrade).toFixed(1)}%
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ 
+                    fontSize: '15px', 
+                    fontWeight: '700', 
+                    color: 'white',
+                    marginBottom: '4px',
+                  }}>
+                    End-to-End Deviation Analysis
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                    Tracing grade drift across pit → stockpile → train → port
+                  </div>
+                </div>
+                
+                {/* Quick Stats */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{
+                    padding: '6px 12px',
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    borderRadius: '6px',
+                    textAlign: 'center',
+                    animation: 'scaleIn 0.3s ease-out 0.2s both',
+                  }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#FCA5A5' }}>
+                      -{(traceData.targetGrade - traceData.predictedGrade).toFixed(1)}%
+                    </div>
+                    <div style={{ fontSize: '9px', color: '#FCA5A5' }}>Total Dev.</div>
+                  </div>
+                  <div style={{
+                    padding: '6px 12px',
+                    background: 'rgba(161, 0, 255, 0.2)',
+                    borderRadius: '6px',
+                    textAlign: 'center',
+                    animation: 'scaleIn 0.3s ease-out 0.3s both',
+                  }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#D8B4FE' }}>
+                      {traceData.deviationSources.length}
+                    </div>
+                    <div style={{ fontSize: '9px', color: '#D8B4FE' }}>Sources</div>
+                  </div>
+                </div>
               </div>
-              <div style={{ fontSize: '9px', color: '#FCA5A5' }}>Total Dev.</div>
             </div>
+          )}
+
+          {/* Key Finding Banner */}
+          {showBanner && (
             <div style={{
-              padding: '6px 12px',
-              background: 'rgba(161, 0, 255, 0.2)',
-              borderRadius: '6px',
-              textAlign: 'center',
+              padding: '12px 20px',
+              background: 'linear-gradient(90deg, #FEF2F2 0%, #FFF7ED 100%)',
+              borderBottom: '1px solid #FECACA',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              animation: 'fadeSlideUp 0.4s ease-out',
             }}>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: '#D8B4FE' }}>
-                {traceData.deviationSources.length}
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: '#EF4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
               </div>
-              <div style={{ fontSize: '9px', color: '#D8B4FE' }}>Sources</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '11px', fontWeight: '700', color: '#991B1B', marginBottom: '2px' }}>
+                  PRIMARY DEVIATION SOURCE IDENTIFIED
+                </div>
+                <div style={{ fontSize: '12px', color: '#7F1D1D' }}>
+                  SP-3 Reclaim → Train Loadout: Blend ratio misconfigured due to 6h assay lag + unrecorded dozer rehandle
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
+          )}
 
-      {/* Key Finding Banner */}
-      <div style={{
-        padding: '12px 20px',
-        background: 'linear-gradient(90deg, #FEF2F2 0%, #FFF7ED 100%)',
-        borderBottom: '1px solid #FECACA',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-      }}>
-        <div style={{
-          width: '32px',
-          height: '32px',
-          borderRadius: '8px',
-          background: '#EF4444',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '11px', fontWeight: '700', color: '#991B1B', marginBottom: '2px' }}>
-            PRIMARY DEVIATION SOURCE IDENTIFIED
-          </div>
-          <div style={{ fontSize: '12px', color: '#7F1D1D' }}>
-            SP-3 Reclaim → Train Loadout: Blend ratio misconfigured due to 6h assay lag + unrecorded dozer rehandle
-          </div>
-        </div>
-      </div>
+          {/* Tab Navigation */}
+          {showTabs && (
+            <div style={{
+              padding: '10px 20px',
+              background: '#FAFAFA',
+              borderBottom: '1px solid #E2E8F0',
+              display: 'flex',
+              gap: '8px',
+              animation: 'fadeIn 0.3s ease-out',
+            }}>
+              <Tab label="Grade Heatmap" isActive={activeTab === 'heatmap'} onClick={() => setActiveTab('heatmap')} icon={Icons.heatmap} />
+              <Tab label="Flow Diagram" isActive={activeTab === 'flow'} onClick={() => setActiveTab('flow')} icon={Icons.flow} />
+              <Tab label="Impact Chart" isActive={activeTab === 'waterfall'} onClick={() => setActiveTab('waterfall')} icon={Icons.chart} />
+              <Tab label="Evidence" isActive={activeTab === 'evidence'} onClick={() => setActiveTab('evidence')} icon={Icons.table} />
+            </div>
+          )}
 
-      {/* Tab Navigation */}
-      <div style={{
-        padding: '10px 20px',
-        background: '#FAFAFA',
-        borderBottom: '1px solid #E2E8F0',
-        display: 'flex',
-        gap: '8px',
-      }}>
-        <Tab label="Grade Heatmap" isActive={activeTab === 'heatmap'} onClick={() => setActiveTab('heatmap')} icon={Icons.heatmap} />
-        <Tab label="Flow Diagram" isActive={activeTab === 'flow'} onClick={() => setActiveTab('flow')} icon={Icons.flow} />
-        <Tab label="Impact Chart" isActive={activeTab === 'waterfall'} onClick={() => setActiveTab('waterfall')} icon={Icons.chart} />
-        <Tab label="Evidence" isActive={activeTab === 'evidence'} onClick={() => setActiveTab('evidence')} icon={Icons.table} />
-      </div>
+          {/* Content */}
+          {showTabContent && (
+            <div style={{ padding: '16px 20px', animation: 'fadeSlideUp 0.4s ease-out' }}>
+              {activeTab === 'heatmap' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '16px' }}>
+                  <GradeDeviationHeatmap onCellClick={(cell) => console.log('Cell clicked:', cell)} />
+                  <DeviationSourcesPanel sources={traceData.deviationSources} />
+                </div>
+              )}
 
-      {/* Content */}
-      <div style={{ padding: '16px 20px' }}>
-        {activeTab === 'heatmap' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '16px' }}>
-            <GradeDeviationHeatmap onCellClick={(cell) => console.log('Cell clicked:', cell)} />
-            <DeviationSourcesPanel sources={traceData.deviationSources} />
-          </div>
-        )}
+              {activeTab === 'flow' && (
+                <GradeTraceSankey
+                  nodes={traceData.traceNodes}
+                  links={traceData.traceLinks}
+                  onSelectNode={handleNodeSelect}
+                  title="Grade Flow: Pit to Ship"
+                  subtitle="Click nodes to view grade details and confidence levels"
+                />
+              )}
 
-        {activeTab === 'flow' && (
-          <GradeTraceSankey
-            nodes={traceData.traceNodes}
-            links={traceData.traceLinks}
-            onSelectNode={handleNodeSelect}
-            title="Grade Flow: Pit to Ship"
-            subtitle="Click nodes to view grade details and confidence levels"
-          />
-        )}
-
-        {activeTab === 'waterfall' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '16px' }}>
-            <DeviationWaterfall
-              data={{
-                targetGrade: traceData.targetGrade,
-                predictedGrade: traceData.predictedGrade,
-                deviationSources: traceData.deviationSources,
-              }}
-              title="Grade Deviation Breakdown"
-              showEvidence={false}
-            />
-            <DeviationSourcesPanel sources={traceData.deviationSources} />
-          </div>
-        )}
-
-        {activeTab === 'evidence' && (
-          <div style={{
-            background: '#F9FAFB',
-            borderRadius: '8px',
-            overflow: 'hidden',
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#A100FF' }}>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '10px', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>
-                    Location
-                  </th>
-                  <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: '10px', color: 'white', textTransform: 'uppercase', fontWeight: '700' }}>
-                    Type
-                  </th>
-                  <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: '10px', color: 'white', textTransform: 'uppercase', fontWeight: '700' }}>
-                    Impact
-                  </th>
-                  <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: '10px', color: 'white', textTransform: 'uppercase', fontWeight: '700' }}>
-                    Confidence
-                  </th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '10px', color: 'white', textTransform: 'uppercase', fontWeight: '700' }}>
-                    Evidence
-                  </th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '10px', color: 'white', textTransform: 'uppercase', fontWeight: '700' }}>
-                    Recommendation
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {traceData.deviationSources
-                  .sort((a, b) => b.confidence - a.confidence)
-                  .map((source, idx) => (
-                  <tr 
-                    key={source.id}
-                    style={{ 
-                      borderBottom: '1px solid #E2E8F0',
-                      background: idx === 0 ? '#FEF2F2' : idx % 2 === 0 ? '#FAFAFA' : 'white',
+              {activeTab === 'waterfall' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '16px' }}>
+                  <DeviationWaterfall
+                    data={{
+                      targetGrade: traceData.targetGrade,
+                      predictedGrade: traceData.predictedGrade,
+                      deviationSources: traceData.deviationSources,
                     }}
-                  >
-                    <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: '600', color: '#1A1A2E' }}>
-                      {source.location}
-                      {idx === 0 && (
-                        <span style={{ marginLeft: '8px', padding: '2px 6px', background: '#EF4444', color: 'white', borderRadius: '4px', fontSize: '9px', fontWeight: '600' }}>
-                          PRIMARY
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ padding: '14px 16px', fontSize: '11px', color: '#6B7280', textAlign: 'center' }}>
-                      <span style={{ padding: '4px 8px', background: '#EEF2FF', borderRadius: '4px', color: '#4338CA', fontWeight: '500' }}>
-                        {source.type.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px', fontSize: '13px', fontWeight: '700', color: '#EF4444', textAlign: 'center' }}>
-                      {source.impact >= 0 ? '+' : ''}{source.impact.toFixed(2)}%
-                    </td>
-                    <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ width: '50px', height: '6px', background: '#E5E7EB', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ width: `${source.confidence * 100}%`, height: '100%', background: source.confidence >= 0.7 ? '#10B981' : '#F59E0B', borderRadius: '3px' }} />
-                        </div>
-                        <span style={{ fontSize: '11px', fontWeight: '600', color: source.confidence >= 0.7 ? '#10B981' : '#F59E0B' }}>
-                          {Math.round(source.confidence * 100)}%
-                        </span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '14px 16px', fontSize: '11px', color: '#4B5563' }}>
-                      {source.evidence}
-                    </td>
-                    <td style={{ padding: '14px 16px', fontSize: '11px', color: '#059669', fontWeight: '500' }}>
-                      {source.recommendation}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                    title="Grade Deviation Breakdown"
+                    showEvidence={false}
+                  />
+                  <DeviationSourcesPanel sources={traceData.deviationSources} />
+                </div>
+              )}
+
+              {activeTab === 'evidence' && (
+                <div style={{
+                  background: '#F9FAFB',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ background: '#A100FF' }}>
+                        <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '10px', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>
+                          Location
+                        </th>
+                        <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: '10px', color: 'white', textTransform: 'uppercase', fontWeight: '700' }}>
+                          Type
+                        </th>
+                        <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: '10px', color: 'white', textTransform: 'uppercase', fontWeight: '700' }}>
+                          Impact
+                        </th>
+                        <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: '10px', color: 'white', textTransform: 'uppercase', fontWeight: '700' }}>
+                          Confidence
+                        </th>
+                        <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '10px', color: 'white', textTransform: 'uppercase', fontWeight: '700' }}>
+                          Evidence
+                        </th>
+                        <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '10px', color: 'white', textTransform: 'uppercase', fontWeight: '700' }}>
+                          Recommendation
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {traceData.deviationSources
+                        .sort((a, b) => b.confidence - a.confidence)
+                        .map((source, idx) => (
+                        <tr 
+                          key={source.id}
+                          style={{ 
+                            borderBottom: '1px solid #E2E8F0',
+                            background: idx === 0 ? '#FEF2F2' : idx % 2 === 0 ? '#FAFAFA' : 'white',
+                          }}
+                        >
+                          <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: '600', color: '#1A1A2E' }}>
+                            {source.location}
+                            {idx === 0 && (
+                              <span style={{ marginLeft: '8px', padding: '2px 6px', background: '#EF4444', color: 'white', borderRadius: '4px', fontSize: '9px', fontWeight: '600' }}>
+                                PRIMARY
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: '14px 16px', fontSize: '11px', color: '#6B7280', textAlign: 'center' }}>
+                            <span style={{ padding: '4px 8px', background: '#EEF2FF', borderRadius: '4px', color: '#4338CA', fontWeight: '500' }}>
+                              {source.type.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 16px', fontSize: '13px', fontWeight: '700', color: '#EF4444', textAlign: 'center' }}>
+                            {source.impact >= 0 ? '+' : ''}{source.impact.toFixed(2)}%
+                          </td>
+                          <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              <div style={{ width: '50px', height: '6px', background: '#E5E7EB', borderRadius: '3px', overflow: 'hidden' }}>
+                                <div style={{ width: `${source.confidence * 100}%`, height: '100%', background: source.confidence >= 0.7 ? '#10B981' : '#F59E0B', borderRadius: '3px' }} />
+                              </div>
+                              <span style={{ fontSize: '11px', fontWeight: '600', color: source.confidence >= 0.7 ? '#10B981' : '#F59E0B' }}>
+                                {Math.round(source.confidence * 100)}%
+                              </span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '14px 16px', fontSize: '11px', color: '#4B5563' }}>
+                            {source.evidence}
+                          </td>
+                          <td style={{ padding: '14px 16px', fontSize: '11px', color: '#059669', fontWeight: '500' }}>
+                            {source.recommendation}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+      
+      <style jsx>{progressiveLoaderStyles}</style>
     </div>
   );
 }

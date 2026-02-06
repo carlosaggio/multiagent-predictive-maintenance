@@ -5,11 +5,13 @@ import ShiftPlanGantt from '../../waio/ShiftPlanGantt';
 import EquipmentAssignmentTable from '../../waio/EquipmentAssignmentTable';
 import BlendRecipePanel from '../../waio/BlendRecipePanel';
 import { waioShiftPlan } from '../../../data/waio/waioScenarioContext';
+import { LoadingSpinner, progressiveLoaderStyles } from '../../../utils/progressiveLoader';
 
 /**
  * WAIO Shift Plan Stage Component
  * 
  * Shows the selected shift plan with Gantt, equipment, and blend recipe.
+ * Enhanced with progressive loading for a more dynamic feel.
  */
 
 // Tab component
@@ -74,24 +76,86 @@ function PredictedOutcomeStrip({ kpis }) {
   );
 }
 
+// Plan loading indicator
+function PlanLoadingIndicator({ step }) {
+  const steps = [
+    'Loading plan parameters...',
+    'Building schedule timeline...',
+    'Assigning equipment...',
+    'Calculating blend recipes...',
+  ];
+  
+  return (
+    <div style={{
+      padding: '40px 20px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '20px',
+    }}>
+      <LoadingSpinner size={32} />
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1A2E', marginBottom: '6px' }}>
+          Loading Shift Plan
+        </div>
+        <div style={{ fontSize: '12px', color: '#6B7280' }}>
+          {steps[step] || steps[0]}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {steps.map((_, idx) => (
+          <div
+            key={idx}
+            style={{
+              width: '32px',
+              height: '4px',
+              borderRadius: '2px',
+              background: idx <= step ? '#A100FF' : '#E2E8F0',
+              transition: 'background 0.3s ease',
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function WAIOShiftPlanStage({ onComplete, selectedPlan }) {
   const [activeTab, setActiveTab] = useState('gantt');
   const hasCompletedRef = useRef(false);
 
   const plan = waioShiftPlan;
+  
+  // Progressive loading states
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [showContent, setShowContent] = useState(false);
+  const [showHeader, setShowHeader] = useState(false);
+  const [showKPIs, setShowKPIs] = useState(false);
+  const [showTabs, setShowTabs] = useState(false);
+  const [showTabContent, setShowTabContent] = useState(false);
 
-  // Trigger completion after mount - only once
+  // Progressive loading sequence
   useEffect(() => {
-    if (hasCompletedRef.current) return;
+    const timers = [
+      setTimeout(() => setLoadingStep(1), 350),
+      setTimeout(() => setLoadingStep(2), 700),
+      setTimeout(() => setLoadingStep(3), 1050),
+      setTimeout(() => { setShowContent(true); setShowHeader(true); }, 1400),
+      setTimeout(() => setShowKPIs(true), 1650),
+      setTimeout(() => setShowTabs(true), 1900),
+      setTimeout(() => setShowTabContent(true), 2150),
+    ];
     
-    const timer = setTimeout(() => {
-      if (!hasCompletedRef.current) {
-        hasCompletedRef.current = true;
-        onComplete?.();
-      }
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []); // Empty dependency array
+    return () => timers.forEach(t => clearTimeout(t));
+  }, []);
+
+  // Completion trigger
+  useEffect(() => {
+    if (showTabContent && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
+      setTimeout(() => onComplete?.(), 500);
+    }
+  }, [showTabContent, onComplete]);
 
   return (
     <div style={{
@@ -100,175 +164,198 @@ export default function WAIOShiftPlanStage({ onComplete, selectedPlan }) {
       border: '1px solid #E2E8F0',
       overflow: 'hidden',
     }}>
-      {/* Header */}
-      <div style={{
-        padding: '20px',
-        background: 'linear-gradient(135deg, #1A1A2E 0%, #2D2D44 100%)',
-      }}>
-        <div style={{ 
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-        }}>
-          <div>
-            <div style={{ 
-              fontSize: '16px', 
-              fontWeight: '700', 
-              color: 'white',
-              marginBottom: '8px',
+      {/* Initial loading state */}
+      {!showContent && (
+        <PlanLoadingIndicator step={loadingStep} />
+      )}
+      
+      {/* Main content */}
+      {showContent && (
+        <>
+          {/* Header */}
+          {showHeader && (
+            <div style={{
+              padding: '20px',
+              background: 'linear-gradient(135deg, #1A1A2E 0%, #2D2D44 100%)',
+              animation: 'fadeIn 0.4s ease-out',
             }}>
-              Selected Shift Plan: {plan.planName}
-            </div>
-            <div style={{ fontSize: '12px', color: '#9CA3AF' }}>
-              12-hour operational plan with equipment assignments and blend recipes
-            </div>
-          </div>
-          <div style={{
-            padding: '6px 12px',
-            background: '#10B98120',
-            borderRadius: '20px',
-            fontSize: '11px',
-            fontWeight: '600',
-            color: '#10B981',
-            textTransform: 'uppercase',
-          }}>
-            {plan.status}
-          </div>
-        </div>
-      </div>
-
-      {/* Predicted outcome */}
-      <div style={{ padding: '20px 20px 0' }}>
-        <PredictedOutcomeStrip kpis={plan.predictedKPIs} />
-      </div>
-
-      {/* Tab navigation */}
-      <div style={{
-        padding: '0 20px',
-        display: 'flex',
-        gap: '8px',
-        borderBottom: '1px solid #E2E8F0',
-        paddingBottom: '12px',
-      }}>
-        <Tab 
-          label="Schedule (Gantt)" 
-          isActive={activeTab === 'gantt'}
-          onClick={() => setActiveTab('gantt')}
-        />
-        <Tab 
-          label="Equipment" 
-          isActive={activeTab === 'equipment'}
-          onClick={() => setActiveTab('equipment')}
-        />
-        <Tab 
-          label="Blend Recipe" 
-          isActive={activeTab === 'blend'}
-          onClick={() => setActiveTab('blend')}
-        />
-        <Tab 
-          label="Actions" 
-          isActive={activeTab === 'actions'}
-          onClick={() => setActiveTab('actions')}
-        />
-      </div>
-
-      {/* Content */}
-      <div style={{ padding: '20px' }}>
-        {activeTab === 'gantt' && (
-          <ShiftPlanGantt
-            tasks={plan.ganttTasks}
-            title="Shift Plan Timeline (06:00 - 18:00)"
-          />
-        )}
-
-        {activeTab === 'equipment' && (
-          <EquipmentAssignmentTable
-            assignments={plan.equipmentAssignments}
-            title="Equipment Assignments"
-          />
-        )}
-
-        {activeTab === 'blend' && (
-          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 280px' }}>
-              <BlendRecipePanel
-                recipe={plan.blendRecipe['TRAIN-07']}
-                trainId="TRAIN-07"
-                gradeTarget={62.0}
-              />
-            </div>
-            <div style={{ flex: '1 1 280px' }}>
-              <BlendRecipePanel
-                recipe={plan.blendRecipe['TRAIN-08']}
-                trainId="TRAIN-08"
-                gradeTarget={62.0}
-              />
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'actions' && (
-          <div>
-            <div style={{ 
-              fontSize: '14px', 
-              fontWeight: '600', 
-              color: '#1A1A2E',
-              marginBottom: '16px',
-            }}>
-              Action Checklist for Supervisors
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {plan.actions.map(action => (
-                <div
-                  key={action.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 16px',
-                    background: '#F9FAFB',
-                    borderRadius: '8px',
-                    border: '1px solid #E2E8F0',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    style={{
-                      width: '18px',
-                      height: '18px',
-                      cursor: 'pointer',
-                    }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ 
-                      fontSize: '12px', 
-                      fontWeight: '600', 
-                      color: '#1A1A2E',
-                      marginBottom: '2px',
-                    }}>
-                      {action.action}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#6B7280' }}>
-                      Owner: {action.owner} • Due: {action.due}
-                    </div>
-                  </div>
-                  <div style={{
-                    padding: '4px 10px',
-                    background: action.status === 'complete' ? '#D1FAE5' : '#FEF3C7',
-                    borderRadius: '12px',
-                    fontSize: '10px',
-                    fontWeight: '600',
-                    color: action.status === 'complete' ? '#065F46' : '#92400E',
-                    textTransform: 'uppercase',
+              <div style={{ 
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+              }}>
+                <div>
+                  <div style={{ 
+                    fontSize: '16px', 
+                    fontWeight: '700', 
+                    color: 'white',
+                    marginBottom: '8px',
                   }}>
-                    {action.status}
+                    Selected Shift Plan: {plan.planName}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#9CA3AF' }}>
+                    12-hour operational plan with equipment assignments and blend recipes
                   </div>
                 </div>
-              ))}
+                <div style={{
+                  padding: '6px 12px',
+                  background: '#10B98120',
+                  borderRadius: '20px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  color: '#10B981',
+                  textTransform: 'uppercase',
+                  animation: 'scaleIn 0.3s ease-out 0.2s both',
+                }}>
+                  {plan.status}
+                </div>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+
+          {/* Predicted outcome */}
+          {showKPIs && (
+            <div style={{ padding: '20px 20px 0', animation: 'fadeSlideUp 0.4s ease-out' }}>
+              <PredictedOutcomeStrip kpis={plan.predictedKPIs} />
+            </div>
+          )}
+
+          {/* Tab navigation */}
+          {showTabs && (
+            <div style={{
+              padding: '0 20px',
+              display: 'flex',
+              gap: '8px',
+              borderBottom: '1px solid #E2E8F0',
+              paddingBottom: '12px',
+              animation: 'fadeIn 0.3s ease-out',
+            }}>
+              <Tab 
+                label="Schedule (Gantt)" 
+                isActive={activeTab === 'gantt'}
+                onClick={() => setActiveTab('gantt')}
+              />
+              <Tab 
+                label="Equipment" 
+                isActive={activeTab === 'equipment'}
+                onClick={() => setActiveTab('equipment')}
+              />
+              <Tab 
+                label="Blend Recipe" 
+                isActive={activeTab === 'blend'}
+                onClick={() => setActiveTab('blend')}
+              />
+              <Tab 
+                label="Actions" 
+                isActive={activeTab === 'actions'}
+                onClick={() => setActiveTab('actions')}
+              />
+            </div>
+          )}
+
+          {/* Content */}
+          {showTabContent && (
+            <div style={{ padding: '20px', animation: 'fadeSlideUp 0.4s ease-out' }}>
+              {activeTab === 'gantt' && (
+                <ShiftPlanGantt
+                  tasks={plan.ganttTasks}
+                  title="Shift Plan Timeline (06:00 - 18:00)"
+                />
+              )}
+
+              {activeTab === 'equipment' && (
+                <EquipmentAssignmentTable
+                  assignments={plan.equipmentAssignments}
+                  title="Equipment Assignments"
+                />
+              )}
+
+              {activeTab === 'blend' && (
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 280px' }}>
+                    <BlendRecipePanel
+                      recipe={plan.blendRecipe['TRAIN-07']}
+                      trainId="TRAIN-07"
+                      gradeTarget={62.0}
+                    />
+                  </div>
+                  <div style={{ flex: '1 1 280px' }}>
+                    <BlendRecipePanel
+                      recipe={plan.blendRecipe['TRAIN-08']}
+                      trainId="TRAIN-08"
+                      gradeTarget={62.0}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'actions' && (
+                <div>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '600', 
+                    color: '#1A1A2E',
+                    marginBottom: '16px',
+                  }}>
+                    Action Checklist for Supervisors
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {plan.actions.map(action => (
+                      <div
+                        key={action.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 16px',
+                          background: '#F9FAFB',
+                          borderRadius: '8px',
+                          border: '1px solid #E2E8F0',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          style={{
+                            width: '18px',
+                            height: '18px',
+                            cursor: 'pointer',
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ 
+                            fontSize: '12px', 
+                            fontWeight: '600', 
+                            color: '#1A1A2E',
+                            marginBottom: '2px',
+                          }}>
+                            {action.action}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#6B7280' }}>
+                            Owner: {action.owner} • Due: {action.due}
+                          </div>
+                        </div>
+                        <div style={{
+                          padding: '4px 10px',
+                          background: action.status === 'complete' ? '#D1FAE5' : '#FEF3C7',
+                          borderRadius: '12px',
+                          fontSize: '10px',
+                          fontWeight: '600',
+                          color: action.status === 'complete' ? '#065F46' : '#92400E',
+                          textTransform: 'uppercase',
+                        }}>
+                          {action.status}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+      
+      <style jsx>{progressiveLoaderStyles}</style>
     </div>
   );
 }

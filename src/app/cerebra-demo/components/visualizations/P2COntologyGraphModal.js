@@ -2402,7 +2402,9 @@ function LineageTab({ searchQuery }) {
               style={{
                 padding: '10px',
                 background: selectedSystem?.id === system.id ? `${color}10` : 'white',
-                border: `1px solid ${selectedSystem?.id === system.id ? color : '#E2E8F0'}`,
+                borderTop: `1px solid ${selectedSystem?.id === system.id ? color : '#E2E8F0'}`,
+                borderRight: `1px solid ${selectedSystem?.id === system.id ? color : '#E2E8F0'}`,
+                borderBottom: `1px solid ${selectedSystem?.id === system.id ? color : '#E2E8F0'}`,
                 borderLeft: `3px solid ${color}`,
                 borderRadius: '6px',
                 marginBottom: '8px',

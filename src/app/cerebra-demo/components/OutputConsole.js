@@ -590,8 +590,10 @@ export default function OutputConsole({
       <div style={{
         flex: 1,
         overflowY: 'auto',
+        overflowX: 'hidden',
         padding: '20px',
-        background: '#fafafa'
+        background: '#fafafa',
+        minHeight: 0,
       }}>
         {/* Waiting state */}
         {!currentStage && (
