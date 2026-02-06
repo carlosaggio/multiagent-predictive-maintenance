@@ -60,3 +60,5 @@ venv.bak/
 security_check.sh
 SECURITY_CHECK_README.md
 
+*.mp4
+*.m4a
