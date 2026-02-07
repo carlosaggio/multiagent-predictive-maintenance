@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.next-old/
 /out/
 
 # production
@@ -62,3 +63,27 @@ SECURITY_CHECK_README.md
 
 *.mp4
 *.m4a
+
+# Large binary/reference files - keep locally, don't push to remote
+ST Engineering/*.pdf
+ST Engineering/*.pptx
+ST Engineering/*.docx
+ST Engineering/*.csv
+ST Engineering/prompt-stacking/
+data/image.png
+
+# Test artifacts
+test-screenshots/
+
+# Word temp files
+~$*
+
+# Zip archives
+*.zip
+
+# Old plan/status files (development artifacts)
+CEREBRA_FINAL_FIX_PLAN.md
+CEREBRA_WORLD_CLASS_REDESIGN_PLAN.md
+CEREBRA_REVAMP_DETAILED_PLAN.md
+AGENT_SECTION_IMPROVEMENT_PLAN.md
+CEREBRA_TEST_RESULTS.md
