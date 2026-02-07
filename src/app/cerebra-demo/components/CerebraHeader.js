@@ -22,6 +22,10 @@ export default function CerebraHeader({
   notificationCount = 0,
   onGraphClick,
   showGraphButton = false,
+  // Control Tower props
+  onControlTowerClick,
+  showControlTowerButton = false,
+  controlTowerActive = false,
   // Domain mode props
   domainMode = null,
   domainModes = [],
@@ -120,6 +124,44 @@ export default function CerebraHeader({
               <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
             </svg>
             Ontology
+          </button>
+        )}
+
+        {/* AI Control Tower Button - icon only, subtle */}
+        {showControlTowerButton && onControlTowerClick && (
+          <button
+            onClick={onControlTowerClick}
+            title="AI Control Tower"
+            style={{
+              background: controlTowerActive ? 'rgba(161,0,255,0.25)' : 'rgba(255,255,255,0.1)',
+              border: `1px solid ${controlTowerActive ? '#A100FF' : 'rgba(255,255,255,0.2)'}`,
+              borderRadius: '6px',
+              padding: '8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: controlTowerActive ? '#A100FF' : 'white',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (!controlTowerActive) {
+                e.currentTarget.style.background = 'rgba(161,0,255,0.2)';
+                e.currentTarget.style.borderColor = 'rgba(161,0,255,0.5)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!controlTowerActive) {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+              }
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M3 9h18"/>
+              <path d="M9 21V9"/>
+            </svg>
           </button>
         )}
 

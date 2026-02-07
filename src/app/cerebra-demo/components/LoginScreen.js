@@ -115,7 +115,7 @@ export default function LoginScreen({ onLogin }) {
             fontWeight: '600',
             letterSpacing: '0.5px'
           }}>
-            Mining Operations
+            Operations
           </div>
           <div style={{ 
             fontSize: '14px', 

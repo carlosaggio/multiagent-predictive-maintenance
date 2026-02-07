@@ -170,7 +170,7 @@ export default function ToolCallDisplay({ call, isVisible }) {
               fontStyle: "italic",
             }}
           >
-            Query: "{call.query}"
+            Query: &quot;{call.query}&quot;
           </div>
         )}
         {call.results && (

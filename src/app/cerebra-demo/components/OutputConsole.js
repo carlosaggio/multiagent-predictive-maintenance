@@ -28,6 +28,21 @@ import {
   WAIOPublishToSystemsStage,
 } from "./outputStages/waio";
 
+// MRO imports
+import {
+  MROAgentNetworkStage,
+  MROControlTowerStage,
+  MROAIPAgentStage,
+  MROAlertTriageStage,
+  MROAlertDetailStage,
+  MROScenarioBuilderStage,
+  MROActionPackStage,
+  MROApprovalStage,
+  MROMBHDashboardStage,
+  MROMBHResolveStage,
+  MROAutomationStage,
+} from "./outputStages/mro";
+
 // Dynamic imports for Nivo charts (client-side only)
 const EfficiencyTrendChart = dynamic(
   () => import('./charts/EfficiencyTrendChart'),
@@ -311,9 +326,16 @@ export default function OutputConsole({
   // Graph and publish handlers
   onOpenGraph = null,
   onPublish = null,
+  // Navigation and action tracking
+  onBack = null,
+  onStageAction = null,
+  // Control Tower overlay (managed by parent)
+  showControlTowerOverlay = false,
+  onCloseControlTower = null,
 }) {
   // Check if in WAIO mode
   const isWAIOMode = domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER;
+  const isMROMode = domainMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN;
   const [activeAgentIndex, setActiveAgentIndex] = useState(-1);
   const [visibleSteps, setVisibleSteps] = useState({});
   const [huddleComplete, setHuddleComplete] = useState(false);
@@ -332,6 +354,8 @@ export default function OutputConsole({
   
   // Chat response history
   const [chatResponseHistory, setChatResponseHistory] = useState([]);
+
+  // Control Tower overlay is now managed by parent (page.js) via prop
   
   const bottomRef = useRef(null);
   
@@ -500,7 +524,7 @@ export default function OutputConsole({
   }, []);
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', position: 'relative', overflow: 'hidden' }}>
       {/* Header with Progress Bar */}
       <div style={{ borderBottom: '1px solid #e2e8f0' }}>
         {/* Orange animated progress bar */}
@@ -585,6 +609,27 @@ export default function OutputConsole({
           </div>
         </div>
       </div>
+
+      {/* AI Control Tower Overlay - Persistent access in MRO mode */}
+      {isMROMode && showControlTowerOverlay && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 50,
+          display: 'flex',
+          flexDirection: 'column',
+          background: '#1a1a2e',
+        }}>
+          <MROControlTowerStage
+            onComplete={() => onCloseControlTower?.()}
+            onBack={() => onCloseControlTower?.()}
+            onStageAction={onStageAction}
+          />
+        </div>
+      )}
 
       {/* Content */}
       <div style={{
@@ -699,8 +744,99 @@ export default function OutputConsole({
           <WAIOPublishToSystemsStage onComplete={() => onStageComplete?.('waio_publish_to_systems')} />
         )}
 
+        {/* MRO Stages */}
+        {isMROMode && currentStage === 'mro_agent_network' && !isProcessingStage && (
+          <MROAgentNetworkStage
+            onComplete={() => onStageComplete?.('mro_agent_network')}
+            onBack={onBack}
+            onStageAction={onStageAction}
+          />
+        )}
+
+        {isMROMode && currentStage === 'mro_control_tower' && !isProcessingStage && (
+          <MROControlTowerStage
+            onComplete={() => onStageComplete?.('mro_control_tower')}
+            onBack={onBack}
+            onStageAction={onStageAction}
+          />
+        )}
+
+        {isMROMode && currentStage === 'mro_aip_agent' && !isProcessingStage && (
+          <MROAIPAgentStage
+            onComplete={() => onStageComplete?.('mro_aip_agent')}
+            onBack={onBack}
+            onStageAction={onStageAction}
+          />
+        )}
+
+        {isMROMode && currentStage === 'mro_alert_triage' && !isProcessingStage && (
+          <MROAlertTriageStage
+            onComplete={() => onStageComplete?.('mro_alert_triage')}
+            onBack={onBack}
+            onStageAction={onStageAction}
+          />
+        )}
+
+        {isMROMode && currentStage === 'mro_alert_detail' && !isProcessingStage && (
+          <MROAlertDetailStage
+            onComplete={() => onStageComplete?.('mro_alert_detail')}
+            onBack={onBack}
+            onStageAction={onStageAction}
+          />
+        )}
+
+        {isMROMode && currentStage === 'mro_scenario_builder' && !isProcessingStage && (
+          <MROScenarioBuilderStage
+            onComplete={() => onStageComplete?.('mro_scenario_builder')}
+            selectedPlan={selectedPlan}
+            onSelectPlan={onSelectPlan}
+            onBack={onBack}
+            onStageAction={onStageAction}
+          />
+        )}
+
+        {isMROMode && currentStage === 'mro_action_pack' && !isProcessingStage && (
+          <MROActionPackStage
+            onComplete={() => onStageComplete?.('mro_action_pack')}
+            onBack={onBack}
+            onStageAction={onStageAction}
+          />
+        )}
+
+        {isMROMode && currentStage === 'mro_approval' && !isProcessingStage && (
+          <MROApprovalStage
+            onComplete={() => onStageComplete?.('mro_approval')}
+            onBack={onBack}
+            onStageAction={onStageAction}
+          />
+        )}
+
+        {isMROMode && currentStage === 'mro_mbh_dashboard' && !isProcessingStage && (
+          <MROMBHDashboardStage
+            onComplete={() => onStageComplete?.('mro_mbh_dashboard')}
+            onBack={onBack}
+            onStageAction={onStageAction}
+          />
+        )}
+
+        {isMROMode && currentStage === 'mro_mbh_resolve' && !isProcessingStage && (
+          <MROMBHResolveStage
+            onComplete={() => onStageComplete?.('mro_mbh_resolve')}
+            onBack={onBack}
+            onStageAction={onStageAction}
+          />
+        )}
+
+        {isMROMode && (currentStage === 'mro_automation' || currentStage === 'mro_automation_detail') && !isProcessingStage && (
+          <MROAutomationStage
+            onComplete={() => onStageComplete?.('mro_automation')}
+            onBack={onBack}
+            onStageAction={onStageAction}
+          />
+        )}
+
         {/* Agent Network Display - shows after Q1 is answered (Maintenance mode) */}
-        {!isWAIOMode && currentStage === 'agent_network' && (
+        {!isWAIOMode && !isMROMode && currentStage === 'agent_network' && (
           <div style={{ marginBottom: '24px' }}>
             <AgentNetworkDisplay isActive={true} />
           </div>
@@ -1160,7 +1296,7 @@ function ChatResponseCard({ response, isLatest }) {
           Query
         </div>
         <div style={{ fontSize: '12px', color: '#374151', flex: 1 }}>
-          "{response.query}"
+          &ldquo;{response.query}&rdquo;
         </div>
         <div style={{ fontSize: '9px', color: '#9ca3af' }}>
           {response.timestamp}

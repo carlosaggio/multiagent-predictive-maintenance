@@ -9,6 +9,7 @@
 export const DOMAIN_MODE_IDS = {
   MAINTENANCE: 'maintenance',
   WAIO_SHIFT_OPTIMISER: 'waioShiftOptimiser',
+  MRO_SUPPLY_CHAIN: 'mroSupplyChain',
 };
 
 // Domain mode configurations
@@ -45,6 +46,23 @@ export const DOMAIN_MODES = {
       notifications: () => import('../data/waio/waioNotifications'),
       processFlowData: () => import('../data/waio/waioProcessFlowData'),
       agentConfig: () => import('../data/waio/waioAgents'),
+    },
+  },
+  [DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN]: {
+    id: DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN,
+    label: 'Aviation MRO & Supply Chain',
+    shortLabel: 'MRO',
+    description: 'MRO operations intelligence, supply chain, and MBH revenue assurance',
+    icon: 'plane',
+    headerTitle: 'Aviation MRO Operations Center',
+    analysisTitle: 'MRO Operations Intelligence',
+    // Dynamic imports will be resolved at runtime
+    imports: {
+      workflowQuestions: () => import('../data/mro/mroWorkflowQuestions'),
+      scenarioContext: () => import('../data/mro/mroScenarioContext'),
+      notifications: () => import('../data/mro/mroNotifications'),
+      processFlowData: () => import('../data/mro/mroProcessFlowData'),
+      agentConfig: () => import('../data/mro/mroAgentConfig'),
     },
   },
 };

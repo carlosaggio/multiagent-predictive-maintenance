@@ -19,6 +19,16 @@ import { waioWorkflowQuestions, waioStageConfig, waioObjectiveWeights, getRandom
 import { waioShift } from "./data/waio/waioScenarioContext";
 import { WAIOKPIStrip } from "./components/waio";
 
+// MRO Overview Components
+import { MROKPIStrip, MROOperationsFlowDiagram } from "./components/mro";
+import MROOntologyGraphModal from "./components/visualizations/MROOntologyGraphModal";
+
+// MRO imports
+import { mroNotifications } from "./data/mro/mroNotifications";
+import { mroWorkflowQuestions, mroStageConfig } from "./data/mro/mroWorkflowQuestions";
+import { mroScenarioContext } from "./data/mro/mroScenarioContext";
+import { getRandomMROScenarioVariant, getCurrentMROScenarioVariant, setMROScenarioVariantById } from "./data/mro/mroScenarioVariants";
+
 // Graph modal
 import P2COntologyGraphModal from "./components/visualizations/P2COntologyGraphModal";
 
@@ -49,23 +59,47 @@ export default function CerebraDemo() {
   
   // Output console state
   const [outputStage, setOutputStage] = useState(null);
+  const [stageHistory, setStageHistory] = useState([]);
   const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
   const [isProcessingStage, setIsProcessingStage] = useState(false);
   
   // Helper to set output stage with processing delay (simulates AI inference)
   const setOutputStageWithDelay = useCallback((stage, delay = 800) => {
     setIsProcessingStage(true);
+    // Before setting new output stage, save current one to history
+    if (outputStage) {
+      setStageHistory(prev => [...prev, { stage: outputStage, questionId: currentQuestionId }]);
+    }
     setOutputStage(null); // Clear current stage
     setTimeout(() => {
       setOutputStage(stage);
       setIsProcessingStage(false);
     }, delay + Math.random() * 400); // Add slight randomness for realism
-  }, []);
+  }, [outputStage, currentQuestionId]);
+
+  // Handle navigating backwards through stages
+  const handleStageBack = useCallback(() => {
+    if (stageHistory.length === 0) return;
+
+    const previousStages = [...stageHistory];
+    const previousStage = previousStages.pop();
+
+    setStageHistory(previousStages);
+    setOutputStage(previousStage.stage);
+
+    // Set corresponding question ID based on stage
+    if (previousStage.questionId) {
+      setCurrentQuestionId(previousStage.questionId);
+    }
+  }, [stageHistory]);
   
   // P2C Ontology Graph modal state
   const [showP2CGraph, setShowP2CGraph] = useState(false);
   const [graphFocusId, setGraphFocusId] = useState(null);
   const [graphMode, setGraphMode] = useState('instance');
+
+  // Control Tower overlay state (MRO mode)
+  const [showControlTowerOverlay, setShowControlTowerOverlay] = useState(false);
   
   // Chatbot response state - displayed in Output Console
   const [chatResponse, setChatResponse] = useState(null);
@@ -82,16 +116,16 @@ export default function CerebraDemo() {
   
   // Helper to get active workflow questions based on domain
   const getActiveWorkflowQuestions = () => {
-    return domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER 
-      ? waioWorkflowQuestions 
-      : workflowQuestions;
+    if (domainMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN) return mroWorkflowQuestions;
+    if (domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER) return waioWorkflowQuestions;
+    return workflowQuestions;
   };
   
   // Helper to get active notifications based on domain
   const getActiveNotifications = () => {
-    return domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER
-      ? waioNotifications
-      : notifications;
+    if (domainMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN) return mroNotifications;
+    if (domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER) return waioNotifications;
+    return notifications;
   };
   
   // Handle domain mode switch
@@ -105,9 +139,18 @@ export default function CerebraDemo() {
       const variant = getRandomScenarioVariant();
       console.log('WAIO Scenario Rotated:', variant.name, variant.trainId);
     }
-    
+
+    // Randomize scenario variant when entering MRO mode
+    if (newMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN) {
+      const variant = getRandomMROScenarioVariant();
+      console.log('MRO Scenario Rotated:', variant.name, variant.aircraftTail);
+    }
+
     // Reset all conversation and workflow state
-    setCurrentQuestionId(newMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER ? 'waio_q1' : 'q1');
+    const startQuestion = newMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER ? 'waio_q1'
+      : newMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN ? 'mro_q1'
+      : 'q1';
+    setCurrentQuestionId(startQuestion);
     setAnsweredQuestions([]);
     setIsConversationLocked(false);
     setSelectedScenario(null);
@@ -146,7 +189,14 @@ export default function CerebraDemo() {
       console.log('getCurrentQuestion (WAIO):', { domainMode, currentQuestionId, questionFound: !!question, questionText: question?.text?.substring(0, 50) });
       return question;
     }
-    
+
+    // MRO mode uses mroWorkflowQuestions
+    if (domainMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN) {
+      const question = mroWorkflowQuestions[currentQuestionId];
+      console.log('getCurrentQuestion (MRO):', { domainMode, currentQuestionId, questionFound: !!question, questionText: question?.text?.substring(0, 50) });
+      return question;
+    }
+
     // Maintenance mode uses workflowQuestions
     const question = workflowQuestions[currentQuestionId];
     console.log('getCurrentQuestion (Maintenance):', { domainMode, currentQuestionId, questionFound: !!question });
@@ -186,13 +236,22 @@ export default function CerebraDemo() {
   // Handle clicking on equipment in digital twin
   const handleEquipmentClick = useCallback((equipmentId) => {
     console.log('handleEquipmentClick:', { equipmentId, domainMode });
+
+    // Handle "Expand Full Ontology" from overview graph
+    if (equipmentId === '__expand__') {
+      handleOpenGraph();
+      return;
+    }
+
     // In WAIO mode, any clickable element triggers the WAIO workflow
+    // In MRO mode, any clickable element triggers the MRO workflow
     // In maintenance mode, only primary_crusher triggers analysis
-    const shouldTrigger = domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER || equipmentId === 'primary_crusher';
-    
+    const shouldTrigger = domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER || domainMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN || equipmentId === 'primary_crusher';
+
     if (shouldTrigger) {
       // Reset analysis state - use correct starting question based on domain mode
-      const startingQuestion = domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER ? 'waio_q1' : 'q1';
+      const startingQuestion = domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER ? 'waio_q1'
+        : domainMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN ? 'mro_q1' : 'q1';
       console.log('Starting analysis with question:', startingQuestion);
       
       setCurrentScene(SCENES.ANALYSIS);
@@ -216,10 +275,10 @@ export default function CerebraDemo() {
       // Set the scenario variant based on the notification
       const variant = setScenarioVariantById(notification.scenarioVariantId);
       console.log('Notification clicked - Setting scenario:', variant.name, variant.trainId);
-      
+
       // Close notifications panel
       setShowNotifications(false);
-      
+
       // Navigate to analysis scene and reset workflow to Q1
       setCurrentScene(SCENES.ANALYSIS);
       setCurrentQuestionId('waio_q1');
@@ -231,7 +290,24 @@ export default function CerebraDemo() {
       setChatResponse(null);
       return;
     }
-    
+
+    // For MRO mode, clicking a notification with a scenarioVariantId starts that scenario
+    if (domainMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN && notification.scenarioVariantId) {
+      const variant = setMROScenarioVariantById(notification.scenarioVariantId);
+      console.log('MRO Notification clicked - Setting scenario:', variant.name, variant.aircraftTail);
+
+      setShowNotifications(false);
+      setCurrentScene(SCENES.ANALYSIS);
+      setCurrentQuestionId('mro_q1');
+      setAnsweredQuestions([]);
+      setSelectedScenario(null);
+      setOutputStage(null);
+      setSelectedObjective(null);
+      setSelectedPlan(null);
+      setChatResponse(null);
+      return;
+    }
+
     // For maintenance mode or non-actionable notifications
     if (notification.severity === "critical") {
       setShowNotifications(false);
@@ -338,6 +414,91 @@ export default function CerebraDemo() {
           } else {
             // User chose not to publish - still advance to complete
             setCurrentQuestionId('waio_complete');
+          }
+          break;
+      }
+      return;
+    }
+
+    // Handle MRO question flows
+    if (domainMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN) {
+      switch (questionId) {
+        case 'mro_q1':
+          if (optionId === 'yes') {
+            setCurrentQuestionId('mro_q2');
+            setOutputStageWithDelay('mro_agent_network', 600);
+          }
+          break;
+        case 'mro_q2':
+          if (optionId === 'yes' || optionId === 'detailed') {
+            setIsConversationLocked(true);
+            setOutputStageWithDelay('mro_control_tower', 800);
+          }
+          break;
+        case 'mro_q3':
+          if (optionId === 'yes' || optionId === 'ask') {
+            setIsConversationLocked(true);
+            setOutputStageWithDelay('mro_aip_agent', 900);
+          }
+          break;
+        case 'mro_q4':
+          // Alert selection
+          setIsConversationLocked(true);
+          setOutputStageWithDelay('mro_alert_triage', 800);
+          break;
+        case 'mro_q5':
+          if (optionId === 'yes' || optionId === 'explore') {
+            setIsConversationLocked(true);
+            setOutputStageWithDelay('mro_alert_detail', 1000);
+          }
+          break;
+        case 'mro_q6':
+          // Scenario option selected
+          setSelectedPlan(optionId);
+          setIsConversationLocked(true);
+          setOutputStageWithDelay('mro_scenario_builder', 800);
+          break;
+        case 'mro_q7':
+          if (optionId === 'yes') {
+            setIsConversationLocked(true);
+            setOutputStageWithDelay('mro_action_pack', 800);
+          }
+          break;
+        case 'mro_q8':
+          if (optionId === 'mbh') {
+            // Show approval gate first, then auto-chain to MBH dashboard after approval
+            setIsConversationLocked(true);
+            setOutputStageWithDelay('mro_approval', 800);
+          } else if (optionId === 'automation') {
+            setIsConversationLocked(true);
+            setOutputStageWithDelay('mro_automation', 800);
+          }
+          // complete → do nothing (cycle ends)
+          break;
+        case 'mro_q9':
+          if (optionId === 'yes' || optionId === 'overview') {
+            setIsConversationLocked(true);
+            setOutputStageWithDelay('mro_mbh_dashboard', 900);
+          }
+          break;
+        case 'mro_q10':
+          if (optionId === 'yes' || optionId === 'review') {
+            setIsConversationLocked(true);
+            setOutputStageWithDelay('mro_mbh_resolve', 800);
+          }
+          break;
+        case 'mro_q11':
+          if (optionId === 'yes') {
+            setIsConversationLocked(true);
+            setOutputStageWithDelay('mro_automation', 800);
+          }
+          break;
+        case 'mro_q12':
+          if (optionId === 'finalize') {
+            setCurrentQuestionId('mro_complete');
+          } else {
+            setIsConversationLocked(true);
+            setOutputStageWithDelay('mro_automation', 800);
           }
           break;
       }
@@ -454,7 +615,75 @@ export default function CerebraDemo() {
       }
       return;
     }
-    
+
+    // Handle MRO stages
+    if (domainMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN) {
+      switch (stage) {
+        case 'mro_agent_network':
+          setIsConversationLocked(false);
+          setCurrentQuestionId('mro_q2');
+          setOutputStageWithDelay('mro_control_tower', 600);
+          break;
+        case 'mro_control_tower':
+          setIsConversationLocked(false);
+          setCurrentQuestionId('mro_q3');
+          setOutputStageWithDelay('mro_aip_agent', 600);
+          break;
+        case 'mro_aip_agent':
+          setIsConversationLocked(false);
+          setCurrentQuestionId('mro_q4');
+          setOutputStageWithDelay('mro_alert_triage', 600);
+          break;
+        case 'mro_alert_triage':
+          setIsConversationLocked(false);
+          setCurrentQuestionId('mro_q5');
+          setOutputStageWithDelay('mro_alert_detail', 600);
+          break;
+        case 'mro_alert_detail':
+          // User answered q5 → alert detail shown → user clicks Continue → unlock q6 for scenario selection
+          setIsConversationLocked(false);
+          setCurrentQuestionId('mro_q6');
+          setOutputStageWithDelay('mro_scenario_builder', 600);
+          break;
+        case 'mro_scenario_builder':
+          // Scenario simulation done → user clicks Continue → unlock q7 for action pack submission
+          setIsConversationLocked(false);
+          setCurrentQuestionId('mro_q7');
+          setOutputStageWithDelay('mro_action_pack', 600);
+          break;
+        case 'mro_action_pack':
+          // Action pack executed → user clicks Continue → unlock q8 for approval/MBH/complete choice
+          setIsConversationLocked(false);
+          setCurrentQuestionId('mro_q8');
+          setOutputStageWithDelay('mro_approval', 600);
+          break;
+        case 'mro_approval':
+          // Approval complete → auto-chain to MBH dashboard (core flow: spares → revenue assurance)
+          setIsConversationLocked(false);
+          setCurrentQuestionId('mro_q9');
+          setOutputStageWithDelay('mro_mbh_dashboard', 800);
+          break;
+        case 'mro_mbh_dashboard':
+          // MBH dashboard reviewed → unlock q10 for billing correction
+          setIsConversationLocked(false);
+          setCurrentQuestionId('mro_q10');
+          setOutputStageWithDelay('mro_mbh_resolve', 600);
+          break;
+        case 'mro_mbh_resolve':
+          // Revenue resolved → unlock q11 for automation review
+          setIsConversationLocked(false);
+          setCurrentQuestionId('mro_q11');
+          setOutputStageWithDelay('mro_automation', 600);
+          break;
+        case 'mro_automation':
+          // Automation configured → unlock q12 for finalize
+          setIsConversationLocked(false);
+          setCurrentQuestionId('mro_q12');
+          break;
+      }
+      return;
+    }
+
     // Handle maintenance stages
     switch (stage) {
       case 'initial_analysis':
@@ -490,6 +719,18 @@ export default function CerebraDemo() {
     setChatResponse(response);
     // Set output stage to chat_response to trigger display
     setOutputStage('chat_response');
+  }, []);
+
+  // Handle stage actions - append system message to conversation
+  const handleStageAction = useCallback((actionDescription) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setAnsweredQuestions(prev => [...prev, {
+      questionId: 'system_action',
+      question: null,
+      answer: actionDescription,
+      timestamp,
+      isSystemMessage: true
+    }]);
   }, []);
 
   return (
@@ -535,13 +776,25 @@ export default function CerebraDemo() {
             {domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER && (
               <WAIOKPIStrip kpis={waioShift.kpis} compact={true} />
             )}
-            
-            {/* DIGITAL TWIN - Mining Process Flow SVG Diagram */}
+
+            {/* MRO KPI Strip (only in MRO mode) - Compact version */}
+            {domainMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN && (
+              <MROKPIStrip compact={true} />
+            )}
+
+            {/* DIGITAL TWIN - Process Flow SVG Diagram */}
             <div style={{ flex: 1 }}>
-              <MiningProcessFlowDiagram 
-                onEquipmentClick={handleEquipmentClick}
-                mode={domainMode}
-              />
+              {domainMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN ? (
+                <MROOperationsFlowDiagram
+                  onEquipmentClick={handleEquipmentClick}
+                  mode={domainMode}
+                />
+              ) : (
+                <MiningProcessFlowDiagram
+                  onEquipmentClick={handleEquipmentClick}
+                  mode={domainMode}
+                />
+              )}
             </div>
           </main>
           <NotificationPanel
@@ -560,8 +813,11 @@ export default function CerebraDemo() {
             title={activeDomain.analysisTitle}
             showBackButton
             onBack={() => setCurrentScene(SCENES.OVERVIEW)}
-            showGraphButton={domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER}
+            showGraphButton={domainMode === DOMAIN_MODE_IDS.WAIO_SHIFT_OPTIMISER || domainMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN}
             onGraphClick={() => handleOpenGraph()}
+            showControlTowerButton={domainMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN}
+            onControlTowerClick={() => setShowControlTowerOverlay(!showControlTowerOverlay)}
+            controlTowerActive={showControlTowerOverlay}
           />
           <main className="cerebra-main" style={{
             flex: 1,
@@ -631,6 +887,12 @@ export default function CerebraDemo() {
                 // Graph and publish handlers
                 onOpenGraph={handleOpenGraph}
                 onPublish={() => setOutputStageWithDelay('waio_publish_to_systems', 800)}
+                // Navigation and action tracking
+                onBack={handleStageBack}
+                onStageAction={handleStageAction}
+                // Control Tower overlay
+                showControlTowerOverlay={showControlTowerOverlay}
+                onCloseControlTower={() => setShowControlTowerOverlay(false)}
               />
             </div>
           </main>
@@ -666,6 +928,14 @@ export default function CerebraDemo() {
           onClose={handleCloseGraph}
           initialFocusId={graphFocusId}
           mode={graphMode}
+        />
+      )}
+
+      {/* MRO Ontology Graph Modal - Always available in MRO mode */}
+      {domainMode === DOMAIN_MODE_IDS.MRO_SUPPLY_CHAIN && (
+        <MROOntologyGraphModal
+          isOpen={showP2CGraph}
+          onClose={handleCloseGraph}
         />
       )}
     </div>

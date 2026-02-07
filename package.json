@@ -51,14 +51,17 @@
     "@nivo/heatmap": "^0.99.0",
     "@nivo/icicle": "^0.99.0",
     "@nivo/line": "^0.99.0",
+    "@nivo/pie": "^0.99.0",
     "@nivo/radar": "^0.99.0",
     "@nivo/sankey": "^0.99.0",
     "@nivo/scatterplot": "^0.99.0",
     "@nivo/stream": "^0.99.0",
     "@nivo/waffle": "^0.99.0",
     "@react-pdf/renderer": "^4.3.1",
+    "@xyflow/react": "^12.10.0",
     "bson": "^6.10.4",
     "dotenv": "^16.5.0",
+    "elkjs": "^0.11.0",
     "execa": "^9.6.0",
     "i": "^0.3.7",
     "mongodb": "^6.17.0",
@@ -72,10 +75,15 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.58.1",
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
     "license-checker": "^25.0.1",
+    "playwright": "^1.58.1",
     "tailwindcss": "^4"
+  },
+  "optionalDependencies": {
+    "@next/swc-linux-arm64-gnu": "^16.1.6"
   }
 }

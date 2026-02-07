@@ -2,9 +2,9 @@ import "./globals.css";
 import Navbar from "@/components/navBar/NavBar";
 
 export const metadata = {
-  title: "Mining Operations - AI Control Tower | AIIS",
+  title: "Operations - AI Control Tower | AIIS",
   description: "AI-Powered Industrial Operations Platform - Accenture Industrial Intelligence Suite",
-  keywords: ["AIIS", "Accenture", "Industrial AI", "Predictive Maintenance", "Mining Operations", "Azure AI", "Control Tower"],
+  keywords: ["AIIS", "Accenture", "Industrial AI", "Predictive Maintenance", "Operations", "Azure AI", "Control Tower"],
   authors: [{ name: "Accenture" }],
   icons: {
     icon: '/favicon.svg',
@@ -12,7 +12,7 @@ export const metadata = {
     apple: '/favicon.svg',
   },
   openGraph: {
-    title: "Mining Operations - AI Control Tower | AIIS",
+    title: "Operations - AI Control Tower | AIIS",
     description: "AI-Powered Industrial Operations Platform - Accenture Industrial Intelligence Suite",
     type: "website",
   },

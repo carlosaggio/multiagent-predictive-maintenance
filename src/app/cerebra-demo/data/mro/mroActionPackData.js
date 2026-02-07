@@ -1,0 +1,113 @@
+export const mroActionPack = {
+  id: 'AP-2024-089',
+  alertId: 'A-1023',
+  selectedOption: 'OPTION-B',
+  status: 'ready',
+  createdAt: '2025-01-15T10:45:00+08:00',
+  createdBy: 'System (MRO Operations Intelligence)',
+
+  actions: [
+    {
+      id: 'ACT-001',
+      type: 'stock_transfer',
+      title: 'Transfer Rotable PN-3391 from Pool East',
+      description: 'Transfer 1x PN-3391 (LDG Bushing, SN-44821) from Pool East to Hangar Site 1',
+      details: {
+        from: 'Pool East',
+        to: 'Hangar Site 1',
+        part: 'PN-3391',
+        serial: 'SN-44821',
+        logistics: 'DHL Priority',
+        eta: '18 hours',
+        cost: 280,
+      },
+      approvalRule: 'auto',
+      approvalThreshold: 10000,
+      status: 'pre_approved',
+      statusLabel: 'Pre-approved (below $10K threshold)',
+      sapTransaction: 'MM: Stock Transfer Order STO-2024-089',
+    },
+    {
+      id: 'ACT-002',
+      type: 'po_expedite',
+      title: 'Expedite PO-8837 (Backup)',
+      description: 'Expedite PO-8837 with Parts Corp — reduce delivery by 3 days as backup to transfer',
+      details: {
+        vendor: 'Parts Corp',
+        po: 'PO-8837',
+        part: 'PN-7742',
+        originalETA: '2025-01-23',
+        newETA: '2025-01-20',
+        expediteFee: 4200,
+        condition: 'Execute only if transfer fails',
+      },
+      approvalRule: 'manual',
+      approver: 'Ops Lead',
+      status: 'pending_approval',
+      statusLabel: 'Pending Ops Lead approval',
+      sapTransaction: 'MM: PO Amendment PO-8837-REV2',
+    },
+    {
+      id: 'ACT-003',
+      type: 'mrp_parameter',
+      title: 'Update MRP Safety Stock for PN-7742',
+      description: 'Increase safety stock level for PN-7742 at Hangar Site 1 from 2 to 4 units',
+      details: {
+        part: 'PN-7742',
+        site: 'Hangar Site 1',
+        currentLevel: 2,
+        newLevel: 4,
+        rationale: 'Recurring vendor delays on long-lead hydraulic actuators',
+      },
+      approvalRule: 'auto',
+      approvalThreshold: null,
+      status: 'pre_approved',
+      statusLabel: 'Pre-approved (parameter change)',
+      sapTransaction: 'PP: MRP Parameter Update PN-7742',
+    },
+  ],
+
+  auditTrail: [
+    { timestamp: '2025-01-15T10:45:00+08:00', actor: 'System', action: 'Action pack AP-2024-089 generated from OPTION-B' },
+    { timestamp: '2025-01-15T10:45:01+08:00', actor: 'System', action: 'ACT-001 auto-approved: Transfer below $10K threshold' },
+    { timestamp: '2025-01-15T10:45:01+08:00', actor: 'System', action: 'ACT-003 auto-approved: MRP parameter change' },
+    { timestamp: '2025-01-15T10:45:02+08:00', actor: 'System', action: 'ACT-002 routed to Ops Lead for approval ($4,200 expedite fee)' },
+    { timestamp: '2025-01-15T10:46:30+08:00', actor: 'Sarah Chen (Ops Lead)', action: 'ACT-002 approved with note: "Proceed as backup only"' },
+    { timestamp: '2025-01-15T10:46:31+08:00', actor: 'System', action: 'SAP write-back initiated for all 3 actions' },
+    { timestamp: '2025-01-15T10:46:45+08:00', actor: 'SAP S/4HANA', action: 'STO-2024-089 created successfully' },
+    { timestamp: '2025-01-15T10:46:48+08:00', actor: 'SAP S/4HANA', action: 'PO-8837-REV2 amendment posted' },
+    { timestamp: '2025-01-15T10:46:50+08:00', actor: 'SAP S/4HANA', action: 'MRP parameter updated for PN-7742' },
+  ],
+
+  sapWriteBack: [
+    { system: 'SAP MM', transaction: 'STO-2024-089', type: 'Stock Transfer Order', status: 'created' },
+    { system: 'SAP MM', transaction: 'PO-8837-REV2', type: 'PO Amendment', status: 'posted' },
+    { system: 'SAP PP', transaction: 'PN-7742-MRP', type: 'MRP Parameter Update', status: 'updated' },
+  ],
+};
+
+export const mroApprovalQueue = [
+  {
+    id: 'APPR-001',
+    actionId: 'ACT-002',
+    actionPackId: 'AP-2024-089',
+    title: 'Expedite PO-8837 — $4,200 fee',
+    description: 'Expedite PO-8837 with Parts Corp as backup to transfer strategy',
+    requestedBy: 'Material Planning Agent',
+    approver: 'Sarah Chen (Ops Lead)',
+    role: 'Ops Lead',
+    cost: 4200,
+    evidence: ['Alert A-1023 detail', 'Scenario simulation results', 'Vendor delay confirmation'],
+    recommendation: 'Approve — backup only, cancel if transfer succeeds within 24h',
+    urgency: 'high',
+    deadline: '2025-01-15T14:00:00+08:00',
+    status: 'approved',
+    decision: {
+      action: 'approved',
+      timestamp: '2025-01-15T10:46:30+08:00',
+      note: 'Proceed as backup only. Review transfer status at 16:00.',
+    },
+  },
+];
+
+export default mroActionPack;
